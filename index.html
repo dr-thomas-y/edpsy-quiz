@@ -33,6 +33,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--brand-d)}
 .btn.ghost{background:var(--stage-2);color:var(--brand);border:2px solid var(--line);box-shadow:none}
 .btn[disabled]{opacity:.45;cursor:default}
+.btn.sm{padding:8px 14px;font-size:14px;border-radius:10px;text-decoration:none}
+.rec{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px}
+.rec th,.rec td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rec th{color:var(--mute);font-size:13px;letter-spacing:.06em}
 h1,h2{margin:0;text-wrap:balance}
 .panel{background:var(--stage-2);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
 .muted{color:var(--mute)}
@@ -196,12 +200,23 @@ function drawFx(){
 const H = { game:null, view:null, lastState:"", lastQ:-1, seen:new Set(), lastTick:-1, busy:false };
 
 function hostShell(right=""){
-  return `<div class="top"><div class="brand">認知學習課堂搶答<small>教育心理學 第八週・認知取向的學習理論</small></div>${right}</div>`;
+  return `<div class="top"><div class="brand">認知學習課堂搶答<small>教育心理學 第八週・認知取向的學習理論</small></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${right}${H.game ? `<button class="btn ghost sm" id="endbtn">結束本場</button>` : ""}</div></div>`;
 }
+// 結束本場：按兩次確認。學生端會跳到最終名次，老師端顯示頒獎與點名紀錄。
+let endArm = 0;
+document.addEventListener("click", e => {
+  const b = e.target.closest("#endbtn"); if(!b) return;
+  if(Date.now() - endArm > 3000){ endArm = Date.now(); b.textContent = "再按一次確認結束"; setTimeout(()=>{ if(b.isConnected) b.textContent = "結束本場"; }, 3000); return; }
+  endArm = 0;
+  if(H.view && H.view.state === "final") newGame(); else step("final", Math.max(0, H.view ? H.view.q_index : 0));
+});
+function newGame(){ store.del("quiz_host"); location.reload(); }
 async function hostStart(){
   audio();
   const g = await rpc("create_game", {p_quiz:QUIZ});
   H.game = {...g, ts:Date.now()}; store.set("quiz_host", H.game);
+  store.set("quiz_history", [H.game, ...(store.get("quiz_history")||[])].slice(0, 60));
   hostLoop();
 }
 // 老師端一打開就是附 QR code 的大廳；12 小時內重新整理會回到同一個房號。
@@ -336,8 +351,10 @@ function renderFinal(v, changed){
       <h1 style="font-size:clamp(40px,7vw,84px)">${p1 ? esc(p1.name) : "（沒有人作答）"}</h1></div>
     <div class="podium">${stepHTML(p1,"p1",1)}${stepHTML(p2,"p2",2)}${stepHTML(p3,"p3",3)}</div>
     <div class="panel" style="display:grid;gap:10px;max-width:760px;margin:0 auto;width:100%"><h2 style="font-size:20px">全班排名</h2><div class="board">${boardHTML(v.players, 50)}</div></div>
-    <div class="center"><button class="btn ghost" id="again">再開一場</button></div>`;
-  $("#again").onclick = () => { store.del("quiz_host"); location.reload(); };
+    <div class="panel" style="display:grid;gap:12px;max-width:760px;margin:0 auto;width:100%" id="rec"></div>
+    <div class="center"><button class="btn" id="again">開新的一場</button></div>`;
+  $("#again").onclick = newGame;
+  showRecords(H.game, $("#rec"));
   sfx.fanfare(); confetti(220); setTimeout(()=>confetti(160), 1200);
 }
 
@@ -352,25 +369,26 @@ function joinForm(code){
     <div class="panel" style="display:grid;gap:16px">
       <h1 style="font-size:28px">加入搶答</h1>
       <div class="field"><label for="code">房號</label><input id="code" inputmode="numeric" maxlength="6" value="${esc(code||"")}" autocomplete="off"></div>
-      <div class="field"><label for="nm">你的暱稱（可匿名，最多 12 字）</label><input id="nm" maxlength="12" autocomplete="off" placeholder="例如：海馬迴守門員"></div>
+      <div class="field"><label for="sid">學號（點名用，只有老師看得到）</label><input id="sid" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="例如：111414001"></div>
+      <div class="field"><label for="nm">暱稱（大螢幕顯示，可匿名，最多 12 字）</label><input id="nm" maxlength="12" autocomplete="off" placeholder="例如：海馬迴守門員"></div>
       <button class="btn" id="join">加入</button>
       <p class="err" id="e"></p>
     </div>`);
   const go = async () => {
     audio();
-    const c = $("#code").value.trim(), n = $("#nm").value.trim();
-    if(!c || !n){ $("#e").textContent = "請填房號和暱稱。"; return; }
+    const c = $("#code").value.trim(), n = $("#nm").value.trim(), sid = $("#sid").value.trim();
+    if(!c || !n || !sid){ $("#e").textContent = "請填房號、學號和暱稱。"; return; }
     $("#join").disabled = true;
     try{
-      const r = await rpc("join_game", {p_code:c, p_name:n});
-      P.me = {...r, name:n, code:c}; store.set("quiz_player", P.me); sfx.join(); phoneLoop();
+      const r = await rpc("join_game", {p_code:c, p_name:n, p_sid:sid});
+      P.me = {...r, name:r.name || n, code:c}; store.set("quiz_player", P.me); sfx.join(); phoneLoop();
     }catch(e){
       $("#e").textContent = /name_taken/.test(e.message) ? "這個暱稱有人用了，換一個吧。" : /no_game/.test(e.message) ? "找不到這個房號，請看大螢幕確認。" : "加入失敗：" + e.message;
       $("#join").disabled = false;
     }
   };
-  $("#join").onclick = go; $("#nm").onkeydown = e => { if(e.key==="Enter") go(); };
-  (code ? $("#nm") : $("#code")).focus();
+  $("#join").onclick = go; $("#sid").onkeydown = e => { if(e.key==="Enter") $("#nm").focus(); }; $("#nm").onkeydown = e => { if(e.key==="Enter") go(); };
+  (code ? $("#sid") : $("#code")).focus();
 }
 async function phoneLoop(){
   try{ const v = await rpc("player_view", {p_player:P.me.player_id}); phoneRender(v); }
@@ -418,9 +436,38 @@ function paintSent(){
   const st = $("#st"); if(st && P.sent!=null) st.textContent = `已送出 ${K[P.sent]}，時間到才公布答案`;
 }
 
-/* ---------- 進入點：?host＝老師主控，其餘＝學生 ---------- */
+/* ================= 點名紀錄（老師） ================= */
+// 只列這台電腦開過的場次（主控鑰匙存在本機）。
+async function showRecords(g, box){
+  box.innerHTML = `<p class="muted" style="margin:0">讀取點名紀錄…</p>`;
+  try{
+    const r = await rpc("host_records", {p_game:g.id, p_token:g.token});
+    const when = new Date(r.created_at).toLocaleString("zh-TW", {hour12:false});
+    box.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+        <h2 style="font-size:20px">點名紀錄・房號 ${esc(r.code)}<span class="muted" style="font-size:14px;font-weight:400"> ${esc(when)}・${r.players.length} 人</span></h2>
+        <button class="btn ghost sm" data-csv>下載 CSV</button></div>
+      <div style="overflow-x:auto"><table class="rec"><thead><tr><th>學號</th><th>暱稱</th><th>作答題數</th><th>答對題數</th><th>分數</th><th>加入時間</th></tr></thead>
+      <tbody>${r.players.map(p=>`<tr><td>${esc(p.student_id||"")}</td><td>${esc(p.name)}</td><td>${p.answered} / ${QUESTIONS.length}</td><td>${p.correct}</td><td>${p.score}</td><td>${esc(new Date(p.joined_at).toLocaleTimeString("zh-TW",{hour12:false}))}</td></tr>`).join("")}</tbody></table></div>`;
+    box.querySelector("[data-csv]").onclick = () => {
+      const rows = [["學號","暱稱","作答題數","答對題數","分數","加入時間"], ...r.players.map(p=>[p.student_id||"", p.name, p.answered, p.correct, p.score, new Date(p.joined_at).toLocaleString("zh-TW",{hour12:false})])];
+      const csv = "\ufeff" + rows.map(x=>x.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
+      a.download = `課堂搶答點名_${r.code}_${new Date(r.created_at).toISOString().slice(0,10)}.csv`; a.click();
+    };
+  }catch(e){ box.innerHTML = `<p class="err">讀不到這場的紀錄：${esc(e.message)}</p>`; }
+}
+function recordsPage(){
+  const hist = store.get("quiz_history") || [];
+  app.innerHTML = `<div class="top"><div class="brand">認知學習課堂搶答<small>點名紀錄</small></div><a class="btn ghost sm" href="?host">回到主控</a></div>
+    ${hist.length ? "" : `<div class="panel"><p class="muted" style="margin:0">這台電腦還沒有開過任何場次。</p></div>`}
+    ${hist.map((g,i)=>`<div class="panel" id="h${i}" style="display:grid;gap:12px"></div>`).join("")}`;
+  hist.forEach((g,i)=>showRecords(g, $("#h"+i)));
+}
+
+/* ---------- 進入點：?host＝老師主控，?records＝點名紀錄，其餘＝學生 ---------- */
 const qs = new URLSearchParams(location.search);
-if(qs.has("host")) hostOpen();
+if(qs.has("records")) recordsPage();
+else if(qs.has("host")) hostOpen();
 else{
   const saved = store.get("quiz_player"), code = qs.get("g");
   if(saved && (!code || saved.code === code)){ P.me = saved; phoneLoop(); }
