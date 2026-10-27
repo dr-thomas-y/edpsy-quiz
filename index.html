@@ -97,6 +97,43 @@ canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50;width:100%;heigh
 .ptiles .opt{flex-direction:column;justify-content:center;align-items:flex-start;font-size:17px}
 .verdict{font-size:40px;font-weight:900}
 .err{color:var(--bad);font-weight:700;min-height:1.2em}
+/* 投影模式（老師端）：撐滿整個畫面，字級隨螢幕放大 */
+body.host .wrap{max-width:none;min-height:100%;padding-block:2.2vh}
+body.host #app{min-height:0}
+body.host .brand{font-size:clamp(22px,1.8vw,34px)}
+body.host .brand small{font-size:clamp(13px,1vw,18px)}
+body.host .pill{font-size:clamp(14px,1.2vw,22px);padding:8px 18px}
+body.host .lobby{flex:1;min-height:0;grid-template-columns:auto minmax(0,1fr)}
+body.host .qrbox{width:min(58vh,38vw)}
+body.host .code{font-size:clamp(56px,6vw,120px)}
+body.host .joinurl{font-size:clamp(13px,1vw,18px)}
+body.host .lobby h2{font-size:clamp(26px,2.4vw,46px)}
+body.host .chip{font-size:clamp(18px,1.6vw,30px);padding:10px 18px}
+body.host .names:empty::before{font-size:clamp(18px,1.6vw,30px)}
+body.host .panel.fill{flex:1;min-height:0;display:flex;flex-direction:column;gap:3vh;padding:3vh 2.4vw}
+body.host .qhead{gap:2vw}
+body.host .timer{width:clamp(90px,9vw,170px);height:clamp(90px,9vw,170px);font-size:clamp(32px,3.6vw,68px)}
+body.host .timer span{width:80%;height:80%}
+body.host .src{font-size:clamp(14px,1.2vw,22px)}
+body.host .qtext{font-size:clamp(28px,3.4vw,64px);line-height:1.3}
+body.host .qtext.rq{font-size:clamp(22px,2.4vw,44px)}
+body.host .opts{flex:1;min-height:0;grid-auto-rows:1fr;gap:2vh 1.4vw}
+body.host .opt{font-size:clamp(22px,2.3vw,46px);padding:2vh 1.6vw;min-height:0;gap:1.2vw;border-radius:20px}
+body.host .opt .k{width:clamp(44px,4vw,80px);height:clamp(44px,4vw,80px);font-size:clamp(26px,2.6vw,52px);border-radius:14px}
+body.host .opt .n{font-size:clamp(26px,2.6vw,52px)}
+body.host .opt .bar{height:10px}
+body.host .stats{padding-block:2.4vh}
+body.host .stats .big{font-size:clamp(44px,4.4vw,88px)!important}
+body.host .stats .muted{font-size:clamp(14px,1.2vw,22px)}
+body.host .btn{font-size:clamp(18px,1.5vw,28px);padding:1.6vh 2vw}
+body.host .btn.sm{font-size:clamp(14px,1.1vw,20px);padding:8px 16px}
+body.host .p1 .blk{height:30vh} body.host .p2 .blk{height:21vh} body.host .p3 .blk{height:15vh}
+body.host .step .nm{font-size:clamp(20px,2.4vw,44px)}
+body.host .row{font-size:clamp(16px,1.4vw,26px)}
+body.host .podium{max-width:1100px}
+body.host .rank{max-width:1100px!important}
+body.host .rank h2{font-size:clamp(20px,1.8vw,34px)!important}
+body.host .board.all{grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
 @media (max-width:760px){
   .lobby{grid-template-columns:minmax(0,1fr)}
   .opts{grid-template-columns:minmax(0,1fr)}
@@ -225,6 +262,7 @@ function hostOpen(){
   if(saved && saved.ts && Date.now() - saved.ts < 12*3600e3){ H.game = saved; hostLoop(); }
   else hostStart().catch(hostIntro);
   document.addEventListener("pointerdown", audio, {once:true});
+  document.body.classList.add("host");
 }
 function hostIntro(){
   const saved = store.get("quiz_host");
@@ -270,7 +308,7 @@ function renderLobby(v, changed){
     mark(v);
     app.innerHTML = hostShell(`<span class="pill" id="cnt"></span>`) + `
       <div class="lobby">
-        <div class="panel" style="display:grid;gap:14px">
+        <div class="panel qrpanel" style="display:grid;gap:14px;align-content:center;justify-items:center">
           <div class="qrbox" id="qr"></div>
           <div class="center"><div class="muted" style="font-weight:700">房號</div><div class="code">${esc(H.game.code)}</div></div>
           <div class="joinurl muted center">${esc(joinURL())}</div>
@@ -307,7 +345,7 @@ function renderQuestion(v, changed){
   if(changed){
     mark(v); H.lastTick = -1;
     app.innerHTML = hostShell(`<span class="pill" id="ans"></span>`) + `
-      <div class="panel" style="display:grid;gap:22px">${qHeader(q)}<div class="opts">${optsHTML(q)}</div></div>
+      <div class="panel fill">${qHeader(q)}<div class="opts">${optsHTML(q)}</div></div>
       <div style="display:flex;gap:12px;justify-content:flex-end"><button class="btn ghost" id="skip">提早公布答案</button></div>`;
     $("#skip").onclick = () => step("reveal", q);
   }
@@ -322,8 +360,8 @@ function renderReveal(v, changed){
   const total = v.answered || 0, pct = total ? Math.round(v.correct_count*100/total) : 0;
   const last = q === QUESTIONS.length-1;
   app.innerHTML = hostShell(`<span class="pill">第 ${q+1} / ${QUESTIONS.length} 題</span>`) + `
-    <div class="panel" style="display:grid;gap:22px">
-      <div class="qtext" style="font-size:clamp(20px,2.6vw,30px)">${esc(QUESTIONS[q].q)}</div>
+    <div class="panel fill">
+      <div class="qtext rq">${esc(QUESTIONS[q].q)}</div>
       <div class="opts">${optsHTML(q)}</div>
     </div>
     <div class="panel stats" style="justify-content:space-around">
@@ -347,7 +385,7 @@ function renderFinal(v, changed){
     <div class="center" style="display:grid;gap:8px"><div class="muted" style="font-weight:700;letter-spacing:.2em">本場第一名</div>
       <h1 style="font-size:clamp(40px,7vw,84px)">${p1 ? esc(p1.name) : "（沒有人作答）"}</h1></div>
     <div class="podium">${stepHTML(p1,"p1",1)}${stepHTML(p2,"p2",2)}${stepHTML(p3,"p3",3)}</div>
-    <div class="panel" style="display:grid;gap:10px;max-width:760px;margin:0 auto;width:100%"><h2 style="font-size:20px">全班排名</h2><div class="board">${v.players.map((p,i)=>`<div class="row"><span class="r">${i+1}</span><span>${esc(p.name)}</span><span class="s">答對 ${p.right} / ${QUESTIONS.length} 題</span></div>`).join("")}</div></div>
+    <div class="panel rank" style="display:grid;gap:10px;max-width:760px;margin:0 auto;width:100%"><h2 style="font-size:20px">全班排名</h2><div class="board all">${v.players.map((p,i)=>`<div class="row"><span class="r">${i+1}</span><span>${esc(p.name)}</span><span class="s">答對 ${p.right} / ${QUESTIONS.length} 題</span></div>`).join("")}</div></div>
     <div class="center"><button class="btn" id="again">開新的一場</button></div>`;
   $("#again").onclick = newGame;
   sfx.fanfare(); confetti(220); setTimeout(()=>confetti(160), 1200);
