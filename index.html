@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>記憶搶答場</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* 舞台：深墨藍夜場，四色答題磚（珊瑚／鈷藍／番紅／青綠）。單一深色主題。 */
+:root{
+  --stage:#141a33; --stage-2:#1d2547; --line:#2e3866; --ink:#f3f1ea; --mute:#a9b0d3;
+  --a:#f2615a; --b:#3d7bf5; --c:#f5b52e; --d:#1fb39a; --ok:#3fd17f; --bad:#f2615a; --gold:#ffd166;
+  --display:"Bungee","Noto Sans TC",system-ui,sans-serif;
+  --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#26306066,transparent),var(--stage);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+button{font:inherit;cursor:pointer;border:0}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:20px;min-height:100%}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-size:20px;letter-spacing:.04em}
+.brand small{font-family:var(--body);font-weight:700;color:var(--mute);font-size:13px;margin-left:8px;letter-spacing:.08em}
+.pill{background:var(--stage-2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:700;color:var(--mute);font-variant-numeric:tabular-nums}
+.btn{background:var(--gold);color:#1a1300;font-weight:900;padding:14px 26px;border-radius:14px;font-size:18px;box-shadow:0 5px 0 #b8902c;transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b8902c}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+.btn[disabled]{opacity:.45;cursor:default}
+h1,h2{margin:0;text-wrap:balance}
+.panel{background:var(--stage-2);border:1px solid var(--line);border-radius:22px;padding:24px}
+.muted{color:var(--mute)}
+.center{text-align:center}
+[hidden]{display:none!important}
+
+/* 大廳 */
+.lobby{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px}
+.qrbox{background:#fff;border-radius:18px;padding:16px;display:grid;place-items:center;aspect-ratio:1;max-width:100%}
+.qrbox img,.qrbox canvas{width:100%!important;height:auto!important}
+.code{font-family:var(--display);font-size:56px;letter-spacing:.12em;line-height:1}
+.joinurl{word-break:break-all;font-size:14px}
+.names{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:120px}
+.chip{background:var(--stage);border:1px solid var(--line);padding:8px 14px;border-radius:12px;font-weight:700;animation:pop .35s ease-out}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+
+/* 題目 */
+.qhead{display:flex;align-items:center;gap:16px}
+.timer{--p:1;width:84px;height:84px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:var(--display);font-size:30px;
+  background:conic-gradient(var(--gold) calc(var(--p)*360deg),var(--line) 0)}
+.timer span{width:68px;height:68px;border-radius:50%;background:var(--stage);display:grid;place-items:center}
+.qtext{font-size:clamp(22px,3.2vw,38px);font-weight:900;line-height:1.35}
+.src{font-size:13px;color:var(--mute);letter-spacing:.06em}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.opt{border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px;font-size:clamp(17px,2vw,24px);font-weight:700;color:#fff;text-align:left;min-height:84px;position:relative;overflow:hidden;transition:opacity .3s,transform .3s}
+.opt .k{font-family:var(--display);font-size:28px;width:44px;height:44px;flex:none;border-radius:10px;background:#0003;display:grid;place-items:center}
+.opt .bar{position:absolute;inset:auto 0 0 0;height:6px;background:#fff8;transform-origin:left;transform:scaleX(var(--w,0));transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+.opt .n{margin-left:auto;font-family:var(--display);font-size:22px}
+.o0{background:var(--a)}.o1{background:var(--b)}.o2{background:var(--c);color:#241a00}.o3{background:var(--d)}
+.dim{opacity:.28;transform:scale(.97)}
+.win{box-shadow:0 0 0 4px #fff,0 0 30px #fff8}
+.stats{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.big{font-family:var(--display);font-size:44px;line-height:1}
+.board{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--stage);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:700}
+.row .r{font-family:var(--display);color:var(--mute)}
+.row .s{font-family:var(--display);font-variant-numeric:tabular-nums}
+.row.me{border-color:var(--gold)}
+
+/* 頒獎 */
+.podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:14px;max-width:760px;margin:0 auto;width:100%}
+.step{display:flex;flex-direction:column;align-items:center;gap:10px}
+.step .nm{font-weight:900;font-size:clamp(16px,2.4vw,26px);text-align:center;word-break:break-all}
+.step .blk{width:100%;border-radius:14px 14px 0 0;display:grid;place-items:center;font-family:var(--display);font-size:42px;color:#1a1300}
+.p1 .blk{height:220px;background:var(--gold)} .p2 .blk{height:150px;background:#cfd6f5} .p3 .blk{height:110px;background:#e6a671}
+.p1{order:2}.p2{order:1}.p3{order:3}
+.crown{font-family:var(--display);color:var(--gold);font-size:18px;letter-spacing:.1em}
+canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:50;width:100%;height:100%}
+
+/* 學生端 */
+.phone{max-width:520px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:16px;flex:1}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:14px;color:var(--mute)}
+.field input{background:var(--stage);border:2px solid var(--line);color:var(--ink);border-radius:12px;padding:14px;font-size:20px;font-family:var(--body);width:100%}
+.ptiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;min-height:320px}
+.ptiles .opt{flex-direction:column;justify-content:center;align-items:flex-start;font-size:17px}
+.verdict{font-size:40px;font-weight:900}
+.err{color:var(--bad);font-weight:700;min-height:1.2em}
+@media (max-width:760px){
+  .lobby{grid-template-columns:minmax(0,1fr)}
+  .opts{grid-template-columns:minmax(0,1fr)}
+  .p1 .blk{height:160px}.p2 .blk{height:110px}.p3 .blk{height:80px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div class="wrap" id="app"></div>
+
+<script>
+const SB_URL = "https://uqrivwblsrhqtlvobdmn.supabase.co";
+const SB_KEY = "sb_publishable_mQWkr11yVYAce8jpkeeZlg_kA6-8BKe";
+const QUIZ = "memory-ch6";
+const LIMIT = 20;
+// 題目文字公開；正解只存在資料庫，學生看原始碼也拿不到。
+const QUESTIONS = [
+  {q:"George Sperling（1960）的實驗發現，哪一種記憶在螢幕上短暫呈現 12 個字母後，一秒鐘之內就有非常明顯的衰退？",
+   o:["短期記憶（short-term memory）","程序記憶（procedural memory）","感覺記憶（sensory memory）","長期記憶（long-term memory）"],
+   s:"107 年專技高考 臨床心理師"},
+  {q:"就短期記憶的認知運作而言，下列敘述何者是錯誤的？",
+   o:["短期記憶遺忘後，可經由檢索再生","短期記憶的容量是有一定限度的","新資訊加以組織有助於短期記憶","與舊有經驗有關的新資訊較容易記憶"],
+   s:"95 台南教甄"},
+  {q:"想記住要買蘋果、可樂、紙巾，就想像可樂罐上頂著一個蘋果，一旁的紙巾來擦倒出來的可樂。這是哪一種記憶策略？",
+   o:["複誦（rehearsal）","組織（organization）","精緻化（elaboration）","後設記憶（metamemory）"],
+   s:"95 教檢"},
+  {q:"根據訊息處理論，人類透過基模（schemata）形式儲存事實與一般知識，這是哪一種記憶？",
+   o:["情節記憶","語意記憶","程序記憶","短期記憶"],
+   s:"95 台北縣教甄"},
+  {q:"閃光燈記憶指的是：",
+   o:["重要事件發生時，個人會牢記當時主要的視覺和聽覺記憶","能記住先前發生的事件，如一星期前午餐吃了什麼","腦部受撞擊暫時失去視覺或聽覺記憶，經一段時間慢慢恢復","人們較容易記憶帶有視覺和聽覺影像的事件"],
+   s:"93 台南教甄"},
+  {q:"開車、打字、騎腳踏車等能力，都是保留在哪一種記憶內的技能？",
+   o:["情節記憶","語意記憶","程序記憶","長期記憶"],
+   s:"97 中區策略聯盟國小教甄"},
+  {q:"十歲的小智腦中的海馬迴（hippocampus）嚴重受損，他最可能出現下列哪一項問題？",
+   o:["無法記憶新訊息","身體動作不協調","無法控制情緒"],
+   s:"97 教檢 學習者發展與適性輔導"},
+];
+const K = "ABCD";
+
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch{ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} },
+  del(k){ try{ localStorage.removeItem(k); }catch{} },
+};
+async function rpc(fn, args){
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
+    method:"POST", headers:{apikey:SB_KEY, "Content-Type":"application/json"}, body:JSON.stringify(args||{})
+  });
+  const t = await r.text(); const j = t ? JSON.parse(t) : null;
+  if(!r.ok) throw new Error((j && j.message) || r.statusText);
+  return j;
+}
+
+/* ---------- 聲音（WebAudio 合成，第一次點擊後才會響） ---------- */
+let ac;
+function audio(){ if(!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch{} } if(ac && ac.state==="suspended") ac.resume(); return ac; }
+function tone(f, d=.12, type="square", v=.06, at=0){
+  const a = ac; if(!a) return;
+  const t = a.currentTime + at, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + .02);
+}
+const sfx = {
+  tick(){ tone(880,.05,"square",.03); },
+  last(){ tone(1320,.08,"square",.05); },
+  join(){ tone(660,.08,"triangle",.07); tone(990,.1,"triangle",.07,.07); },
+  go(){ [523,659,784,1047].forEach((f,i)=>tone(f,.14,"triangle",.08,i*.08)); },
+  reveal(){ tone(392,.18,"sawtooth",.05); tone(587,.3,"triangle",.08,.12); },
+  good(){ [784,1047,1319].forEach((f,i)=>tone(f,.12,"triangle",.09,i*.07)); },
+  bad(){ tone(220,.25,"sawtooth",.06); tone(165,.35,"sawtooth",.06,.15); },
+  fanfare(){ [523,523,523,659,784,659,784,1047].forEach((f,i)=>tone(f,i===7?.6:.14,"triangle",.1,[0,.14,.28,.42,.62,.82,.96,1.12][i])); },
+};
+
+/* ---------- 彩帶 ---------- */
+const fx = $("#fx"), ctx = fx.getContext("2d"); let bits = [];
+function confetti(n=180){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  fx.width = innerWidth; fx.height = innerHeight;
+  const cols = ["#f2615a","#3d7bf5","#f5b52e","#1fb39a","#ffd166","#ffffff"];
+  for(let i=0;i<n;i++) bits.push({x:Math.random()*fx.width, y:-20-Math.random()*fx.height*.5, vx:(Math.random()-.5)*4, vy:2+Math.random()*4,
+    r:Math.random()*Math.PI, vr:(Math.random()-.5)*.3, w:6+Math.random()*8, h:8+Math.random()*10, c:cols[i%cols.length]});
+  if(bits.length===n) requestAnimationFrame(drawFx);
+}
+function drawFx(){
+  ctx.clearRect(0,0,fx.width,fx.height);
+  bits = bits.filter(b => b.y < fx.height + 30);
+  for(const b of bits){ b.x+=b.vx; b.y+=b.vy; b.vy+=.04; b.r+=b.vr;
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.r); ctx.fillStyle=b.c; ctx.fillRect(-b.w/2,-b.h/2,b.w,b.h); ctx.restore(); }
+  if(bits.length) requestAnimationFrame(drawFx);
+}
+
+/* ================= 老師主控端 ================= */
+const H = { game:null, view:null, lastState:"", lastQ:-1, seen:new Set(), lastTick:-1, busy:false };
+
+function hostShell(right=""){
+  return `<div class="top"><div class="brand">記憶搶答場<small>教育心理學・第八週 Chap. 6</small></div>${right}</div>`;
+}
+async function hostStart(){
+  audio();
+  const g = await rpc("create_game", {p_quiz:QUIZ});
+  H.game = {...g, ts:Date.now()}; store.set("quiz_host", H.game);
+  hostLoop();
+}
+// 老師端一打開就是附 QR code 的大廳；12 小時內重新整理會回到同一個房號。
+function hostOpen(){
+  const saved = store.get("quiz_host");
+  if(saved && saved.ts && Date.now() - saved.ts < 12*3600e3){ H.game = saved; hostLoop(); }
+  else hostStart().catch(hostIntro);
+  document.addEventListener("pointerdown", audio, {once:true});
+}
+function hostIntro(){
+  const saved = store.get("quiz_host");
+  app.innerHTML = hostShell() + `
+    <div class="panel center" style="display:grid;gap:18px;justify-items:center;padding-block:48px">
+      <h1 style="font-size:clamp(28px,4vw,46px)">認知取向的學習理論・記憶 7 題</h1>
+      <p class="muted" style="max-width:56ch;margin:0">按下開場會產生新的房號與 QR code。學生用手機掃描、自己取暱稱加入。每題 ${LIMIT} 秒，答對越快分數越高。</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button class="btn" id="go">開新的一場</button>
+        ${saved ? `<button class="btn ghost" id="resume">回到房號 ${esc(saved.code)}</button>` : ""}
+      </div>
+      <p class="err" id="e"></p>
+    </div>`;
+  $("#go").onclick = () => hostStart().catch(e => $("#e").textContent = "無法開場：" + e.message);
+  if(saved) $("#resume").onclick = () => { audio(); H.game = saved; hostLoop(); };
+}
+async function hostLoop(){
+  try{
+    const v = await rpc("host_view", {p_game:H.game.id, p_token:H.game.token});
+    H.view = v; hostRender(v);
+  }catch(e){ console.warn(e); }
+  setTimeout(hostLoop, 1000);
+}
+async function step(state, q){
+  if(H.busy) return; H.busy = true;
+  try{ await rpc("host_step", {p_game:H.game.id, p_token:H.game.token, p_state:state, p_q:q});
+       const v = await rpc("host_view", {p_game:H.game.id, p_token:H.game.token}); H.view=v; hostRender(v); }
+  finally{ H.busy = false; }
+}
+function joinURL(){ const u = new URL(location.href); u.search = "?g=" + H.game.code; u.hash = ""; return u.toString(); }
+
+function hostRender(v){
+  const changed = v.state !== H.lastState || v.q_index !== H.lastQ;
+  if(v.state==="lobby") return renderLobby(v, changed);
+  if(v.state==="question") return renderQuestion(v, changed);
+  if(v.state==="reveal") return renderReveal(v, changed);
+  if(v.state==="final") return renderFinal(v, changed);
+}
+function mark(v){ H.lastState = v.state; H.lastQ = v.q_index; }
+
+function renderLobby(v, changed){
+  if(changed){
+    mark(v);
+    app.innerHTML = hostShell(`<span class="pill" id="cnt"></span>`) + `
+      <div class="lobby">
+        <div class="panel" style="display:grid;gap:14px">
+          <div class="qrbox" id="qr"></div>
+          <div class="center"><div class="muted" style="font-weight:700">房號</div><div class="code">${esc(H.game.code)}</div></div>
+          <div class="joinurl muted center">${esc(joinURL())}</div>
+        </div>
+        <div class="panel" style="display:flex;flex-direction:column;gap:16px">
+          <h2 style="font-size:28px">掃描加入，取個暱稱</h2>
+          <div class="names" id="names"></div>
+          <div style="margin-top:auto;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <button class="btn" id="start">開始第 1 題</button>
+            <button class="btn ghost" id="new">重開一場</button>
+          </div>
+        </div>
+      </div>`;
+    new QRCode($("#qr"), {text:joinURL(), width:512, height:512, correctLevel:QRCode.CorrectLevel.M});
+    $("#start").onclick = () => { sfx.go(); step("question", 0); };
+    $("#new").onclick = () => { store.del("quiz_host"); location.reload(); };
+    H.seen.clear();
+  }
+  const box = $("#names");
+  for(const p of v.players){ if(!H.seen.has(p.name)){ H.seen.add(p.name); const c=document.createElement("span"); c.className="chip"; c.textContent=p.name; box.appendChild(c); sfx.join(); } }
+  $("#cnt").textContent = `${v.players.length} 人已加入`;
+  $("#start").disabled = v.players.length===0;
+}
+
+function optsHTML(q, cls=""){
+  return QUESTIONS[q].o.map((t,i)=>`<div class="opt o${i} ${cls}" id="op${i}"><span class="k">${K[i]}</span><span>${esc(t)}</span><span class="n" id="n${i}"></span><span class="bar"></span></div>`).join("");
+}
+function qHeader(q){
+  return `<div class="qhead"><div class="timer" id="tm"><span id="tn">${LIMIT}</span></div>
+    <div style="display:grid;gap:6px;min-width:0"><div class="src">第 ${q+1} / ${QUESTIONS.length} 題・${esc(QUESTIONS[q].s)}</div><div class="qtext">${esc(QUESTIONS[q].q)}</div></div></div>`;
+}
+function renderQuestion(v, changed){
+  const q = v.q_index;
+  if(changed){
+    mark(v); H.lastTick = -1;
+    app.innerHTML = hostShell(`<span class="pill" id="ans"></span>`) + `
+      <div class="panel" style="display:grid;gap:22px">${qHeader(q)}<div class="opts">${optsHTML(q)}</div></div>
+      <div style="display:flex;gap:12px;justify-content:flex-end"><button class="btn ghost" id="skip">提早公布答案</button></div>`;
+    $("#skip").onclick = () => step("reveal", q);
+  }
+  const left = Math.max(0, Math.ceil(LIMIT - v.elapsed));
+  $("#tn").textContent = left; $("#tm").style.setProperty("--p", left/LIMIT);
+  if(left !== H.lastTick){ H.lastTick = left; if(left<=5 && left>0) sfx.last(); else if(left>0) sfx.tick(); }
+  $("#ans").textContent = `${v.answered} / ${v.players.length} 人已作答`;
+  if(left===0 || (v.players.length && v.answered >= v.players.length)) step("reveal", q);
+}
+function boardHTML(players, n=5){
+  return players.slice(0,n).map((p,i)=>`<div class="row"><span class="r">${i+1}</span><span>${esc(p.name)}</span><span class="s">${p.score}</span></div>`).join("");
+}
+function renderReveal(v, changed){
+  const q = v.q_index; if(!changed) return; mark(v); sfx.reveal();
+  const total = v.answered || 0, pct = total ? Math.round(v.correct_count*100/total) : 0;
+  const last = q === QUESTIONS.length-1;
+  app.innerHTML = hostShell(`<span class="pill">第 ${q+1} / ${QUESTIONS.length} 題</span>`) + `
+    <div class="panel" style="display:grid;gap:22px">
+      <div class="qtext" style="font-size:clamp(20px,2.6vw,30px)">${esc(QUESTIONS[q].q)}</div>
+      <div class="opts">${optsHTML(q)}</div>
+    </div>
+    <div class="panel stats" style="justify-content:space-around">
+      <div class="center"><div class="big" style="color:var(--ok);font-size:72px">${pct}%</div><div class="muted">答對率</div></div>
+      <div class="center"><div class="big">${v.correct_count}<span class="muted" style="font-size:22px"> / ${total}</span></div><div class="muted">答對人數 / 作答人數</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end"><button class="btn" id="next">${last ? "公布第一名" : `下一題（第 ${q+2} 題）`}</button></div>`;
+  const max = Math.max(1, ...v.dist);
+  QUESTIONS[q].o.forEach((_,i)=>{
+    const el = $("#op"+i); $("#n"+i).textContent = v.dist[i] || 0;
+    el.querySelector(".bar").style.setProperty("--w", (v.dist[i]||0)/max);
+    if(i===v.correct) el.classList.add("win"); else el.classList.add("dim");
+  });
+  $("#next").onclick = () => last ? (sfx.go(), step("final", q)) : (sfx.go(), step("question", q+1));
+}
+function renderFinal(v, changed){
+  if(!changed) return; mark(v);
+  const [p1,p2,p3] = v.players;
+  const stepHTML = (p,cls,n)=> p ? `<div class="step ${cls}">${n===1?'<div class="crown">CHAMPION</div>':''}<div class="nm">${esc(p.name)}</div><div class="muted" style="font-family:var(--display)">${p.score}</div><div class="blk">${n}</div></div>` : `<div class="step ${cls}"></div>`;
+  app.innerHTML = hostShell(`<span class="pill">${v.players.length} 位參賽</span>`) + `
+    <div class="center" style="display:grid;gap:8px"><div class="muted" style="font-weight:700;letter-spacing:.2em">本場第一名</div>
+      <h1 style="font-size:clamp(40px,7vw,84px)">${p1 ? esc(p1.name) : "（沒有人作答）"}</h1></div>
+    <div class="podium">${stepHTML(p1,"p1",1)}${stepHTML(p2,"p2",2)}${stepHTML(p3,"p3",3)}</div>
+    <div class="panel" style="display:grid;gap:10px;max-width:760px;margin:0 auto;width:100%"><h2 style="font-size:20px">全班排名</h2><div class="board">${boardHTML(v.players, 50)}</div></div>
+    <div class="center"><button class="btn ghost" id="again">再開一場</button></div>`;
+  $("#again").onclick = () => { store.del("quiz_host"); location.reload(); };
+  sfx.fanfare(); confetti(220); setTimeout(()=>confetti(160), 1200);
+}
+
+/* ================= 學生手機端 ================= */
+const P = { me:null, lastState:"", lastQ:-1, sent:null };
+
+function phoneShell(inner, right=""){
+  return `<div class="top"><div class="brand">記憶搶答場</div>${right}</div><div class="phone">${inner}</div>`;
+}
+function joinForm(code){
+  app.innerHTML = phoneShell(`
+    <div class="panel" style="display:grid;gap:16px">
+      <h1 style="font-size:28px">加入搶答</h1>
+      <div class="field"><label for="code">房號</label><input id="code" inputmode="numeric" maxlength="6" value="${esc(code||"")}" autocomplete="off"></div>
+      <div class="field"><label for="nm">你的暱稱（可匿名，最多 12 字）</label><input id="nm" maxlength="12" autocomplete="off" placeholder="例如：海馬迴守門員"></div>
+      <button class="btn" id="join">加入</button>
+      <p class="err" id="e"></p>
+    </div>`);
+  const go = async () => {
+    audio();
+    const c = $("#code").value.trim(), n = $("#nm").value.trim();
+    if(!c || !n){ $("#e").textContent = "請填房號和暱稱。"; return; }
+    $("#join").disabled = true;
+    try{
+      const r = await rpc("join_game", {p_code:c, p_name:n});
+      P.me = {...r, name:n, code:c}; store.set("quiz_player", P.me); sfx.join(); phoneLoop();
+    }catch(e){
+      $("#e").textContent = /name_taken/.test(e.message) ? "這個暱稱有人用了，換一個吧。" : /no_game/.test(e.message) ? "找不到這個房號，請看大螢幕確認。" : "加入失敗：" + e.message;
+      $("#join").disabled = false;
+    }
+  };
+  $("#join").onclick = go; $("#nm").onkeydown = e => { if(e.key==="Enter") go(); };
+  (code ? $("#nm") : $("#code")).focus();
+}
+async function phoneLoop(){
+  try{ const v = await rpc("player_view", {p_player:P.me.player_id}); phoneRender(v); }
+  catch(e){ if(/no_player/.test(e.message)){ store.del("quiz_player"); return joinForm(P.me.code); } console.warn(e); }
+  setTimeout(phoneLoop, 1000);
+}
+function phoneRender(v){
+  const changed = v.state !== P.lastState || v.q_index !== P.lastQ;
+  const right = `<span class="pill">${esc(P.me.name)}・${v.score} 分</span>`;
+  if(v.state==="lobby"){ if(!changed) return; P.lastState=v.state; P.lastQ=v.q_index;
+    app.innerHTML = phoneShell(`<div class="panel center" style="display:grid;gap:12px;padding-block:48px"><div class="big">✓</div><h1 style="font-size:26px">你已加入</h1><p class="muted" style="margin:0">看大螢幕，老師開始後題目會出現在這裡。</p></div>`, right); return; }
+  if(v.state==="question"){
+    const q = v.q_index;
+    if(changed){ P.lastState=v.state; P.lastQ=q; P.sent = v.my_choice;
+      app.innerHTML = phoneShell(`<div class="src">第 ${q+1} / ${QUESTIONS.length} 題</div>
+        <div style="font-size:19px;font-weight:900;line-height:1.45">${esc(QUESTIONS[q].q)}</div>
+        <div class="ptiles">${QUESTIONS[q].o.map((t,i)=>`<button class="opt o${i}" data-i="${i}"><span class="k">${K[i]}</span><span>${esc(t)}</span></button>`).join("")}</div>
+        <p class="center muted" id="st"></p>`, right);
+      app.querySelectorAll(".ptiles .opt").forEach(b => b.onclick = async () => {
+        if(P.sent!=null) return; const i = +b.dataset.i; P.sent = i; paintSent(); audio(); tone(700,.08,"triangle",.08);
+        try{ await rpc("submit_answer", {p_player:P.me.player_id, p_q:q, p_choice:i}); }
+        catch(e){ P.sent=null; paintSent(); $("#st").textContent = /closed/.test(e.message) ? "時間到了，這題沒送出。" : "送出失敗，再按一次。"; }
+      });
+    }
+    paintSent(); return;
+  }
+  if(v.state==="reveal"){ if(!changed) return; P.lastState=v.state; P.lastQ=v.q_index;
+    const ok = v.my_correct===true, none = v.my_choice==null;
+    (ok ? sfx.good : sfx.bad)(); if(ok) confetti(70);
+    app.innerHTML = phoneShell(`<div class="panel center" style="display:grid;gap:12px;padding-block:40px;border-color:${ok?"var(--ok)":"var(--bad)"}">
+      <div class="verdict" style="color:${ok?"var(--ok)":"var(--bad)"}">${none?"沒有作答":ok?"答對了！":"答錯了"}</div>
+      <div class="big">+${v.my_points||0}</div>
+      <p class="muted" style="margin:0">正解是 ${K[v.correct]}：${esc(QUESTIONS[v.q_index].o[v.correct])}</p>
+      <p style="margin:0;font-weight:700">目前第 ${v.rank} 名・共 ${v.total} 人</p></div>`, right); return; }
+  if(v.state==="final"){ if(!changed) return; P.lastState=v.state; P.lastQ=v.q_index;
+    if(v.rank===1){ sfx.fanfare(); confetti(240); } else sfx.reveal();
+    app.innerHTML = phoneShell(`<div class="panel center" style="display:grid;gap:12px;padding-block:48px">
+      <div class="muted" style="font-weight:700;letter-spacing:.2em">最終名次</div>
+      <div class="code" style="color:${v.rank===1?"var(--gold)":"var(--ink)"}">#${v.rank}</div>
+      <h1 style="font-size:24px">${v.rank===1?"你是本場冠軍！":`總分 ${v.score} 分`}</h1>
+      <p class="muted" style="margin:0">共 ${v.total} 人參加，第一名是 ${esc(v.leader||"")}</p></div>`, right); }
+}
+function paintSent(){
+  app.querySelectorAll(".ptiles .opt").forEach(b => { b.classList.toggle("dim", P.sent!=null && +b.dataset.i!==P.sent); b.disabled = P.sent!=null; });
+  const st = $("#st"); if(st && P.sent!=null) st.textContent = `已送出 ${K[P.sent]}，等其他同學作答…`;
+}
+
+/* ---------- 進入點：?host＝老師主控，其餘＝學生 ---------- */
+const qs = new URLSearchParams(location.search);
+if(qs.has("host")) hostOpen();
+else{
+  const saved = store.get("quiz_player"), code = qs.get("g");
+  if(saved && (!code || saved.code === code)){ P.me = saved; phoneLoop(); }
+  else joinForm(code);
+}
+</script>
+</body>
+</html>
