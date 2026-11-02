@@ -75,7 +75,6 @@ const app = $("#app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store = {get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}}, set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)), del:k=>localStorage.removeItem(k)};
 const hhmm = t => new Date(t).toLocaleTimeString("zh-TW",{hour12:false});
-const day = t => new Date(t).toLocaleDateString("zh-TW",{month:"numeric",day:"numeric",weekday:"short"});
 async function rpc(fn, args){
   const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
     method:"POST", headers:{apikey:SB_KEY, "Content-Type":"application/json"}, body:JSON.stringify(args||{})
@@ -85,17 +84,13 @@ async function rpc(fn, args){
   return j;
 }
 
-/* ---------- 投影端：QR 碼由伺服器每 10 秒換一次，不受教室電腦時鐘影響 ---------- */
+/* ---------- 投影端：任何人隨時可開一場；只有開場的這個頁面能結束它。QR 碼由伺服器每 10 秒換一次 ---------- */
 function host(){
   document.body.classList.add("host");
   app.innerHTML = `<div class="panel center" style="margin:auto;display:grid;gap:18px;max-width:560px">
-    <h1>教育心理學課堂點名</h1>
-    <p class="muted" style="margin:0">按下開始後投影 QR 碼。QR 碼每 10 秒更新，截圖轉傳約 1 分半後就失效；按「結束點名」後，今天就不能再簽到。</p>
-    <button class="btn" id="open">開始點名</button>
-    <div class="err" id="e"></div></div>`;
+    <h1>教育心理學課堂點名</h1><button class="btn" id="open">開始點名</button><div class="err" id="e"></div></div>`;
   $("#open").onclick = async () => {
-    try{ const s = await rpc("rc_open_pub"); projection(s.id); }
-    catch(e){ $("#e").textContent = e.message === "closed_today" ? "今天的點名已經結束，不能再開。" : "連線失敗，請再按一次。"; }
+    try{ const s = await rpc("rc_open_pub"); projection(s.id); } catch(e){ $("#e").textContent = "連線失敗，請再按一次。"; }
   };
 }
 function projection(sid){
@@ -103,9 +98,8 @@ function projection(sid){
       <div class="qrbox" id="qr"></div>
       <div style="display:grid;gap:3vh">
         <div class="brand">教育心理學課堂點名</div>
-        <div class="hint">用手機相機掃描 QR 碼，輸入學號簽到</div>
+        <div class="hint">手機掃 QR 碼，輸入學號</div>
         <div><div class="muted hint">已簽到</div><div class="count" id="n">0<small> / 0</small></div></div>
-        <div class="muted" id="since"></div>
         <div><button class="btn ghost" id="close">結束點名</button></div>
       </div></div>`;
   let last = "", timer;
@@ -119,19 +113,17 @@ function projection(sid){
       new QRCode($("#qr"), {text:`${location.origin}${location.pathname}?t=${v.token}`, width:512, height:512, correctLevel:QRCode.CorrectLevel.M});
     }
     $("#n").innerHTML = `${v.count}<small> / ${v.total}</small>`;
-    $("#since").textContent = `${hhmm(v.created_at)} 開始`;
     timer = setTimeout(tick, 2000);
   };
   $("#close").onclick = async () => {
-    if(!confirm("確定結束點名？結束後今天就不能再簽到，也不能重開。")) return;
+    if(!confirm("確定結束點名？")) return;
     clearTimeout(timer); await rpc("rc_close_pub", {p_session:sid}); tick();
   };
   tick();
 }
 function ended(v){
   app.innerHTML = `<div class="panel center" style="margin:auto;display:grid;gap:18px;max-width:560px">
-    <h1>本次點名已結束</h1><div class="count">${v.count}<small> / ${v.total}</small></div>
-</div>`;
+    <h1>點名已結束</h1><div class="count">${v.count}<small> / ${v.total}</small></div></div>`;
 }
 
 /* ---------- 學生端 ---------- */
