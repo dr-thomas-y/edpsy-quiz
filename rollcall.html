@@ -85,25 +85,23 @@ async function rpc(fn, args){
   return j;
 }
 
-/* ---------- 老師金鑰：只存在這個分頁，關掉就清掉（投影的是公用電腦）；網址 #k=金鑰 也可帶入 ---------- */
-const keyStore = {get:()=>sessionStorage.getItem("rc_key"), set:v=>sessionStorage.setItem("rc_key",v), del:()=>sessionStorage.removeItem("rc_key")};
-localStorage.removeItem("rc_key"); // 清掉舊版存在電腦上的金鑰
+/* ---------- 老師金鑰：存在這台電腦；網址 #k=金鑰 也可帶入 ---------- */
 function teacherKey(then){
   const h = new URLSearchParams(location.hash.slice(1)).get("k");
-  if(h){ keyStore.set(h); history.replaceState(null, "", location.pathname + location.search); }
-  const k = keyStore.get();
+  if(h){ store.set("rc_key", h); history.replaceState(null, "", location.pathname + location.search); }
+  const k = store.get("rc_key");
   if(k) return then(k);
   app.innerHTML = `<div class="phone panel"><h2>老師登入</h2>
     <div class="field"><label for="k">老師金鑰</label><input id="k" autocomplete="off"></div>
     <div class="err" id="e"></div><button class="btn" id="go">進入</button></div>`;
   $("#go").onclick = async () => {
     const v = $("#k").value.trim();
-    try{ await rpc("rc_sessions_list", {p_key:v}); keyStore.set(v); then(v); }
+    try{ await rpc("rc_sessions_list", {p_key:v}); store.set("rc_key", v); then(v); }
     catch{ $("#e").textContent = "金鑰不正確"; }
   };
   $("#k").focus();
 }
-const authFail = e => { if(/not_admin/.test(e.message)){ keyStore.del(); location.reload(); } else throw e; };
+const authFail = e => { if(/not_admin/.test(e.message)){ store.del("rc_key"); location.reload(); } else throw e; };
 
 /* ---------- 投影端：QR 碼由伺服器每 10 秒換一次，不受教室電腦時鐘影響 ---------- */
 function host(key){
