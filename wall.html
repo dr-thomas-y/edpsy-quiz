@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 .center{text-align:center}
 .err{color:var(--bad);font-weight:700;min-height:1.2em}
 h1,h2{margin:0;color:var(--ink-deep);font-weight:800;letter-spacing:-.02em}
-h1{font-size:30px} h2{font-size:21px}
+h1{font-size:30px} h2{font-size:23px}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-weight:700;font-size:13px;color:var(--slate)}
 .field input{background:var(--canvas);border:1.5px solid var(--line-2);color:var(--ink);border-radius:10px;padding:13px;font-size:22px;font-family:var(--body);width:100%;letter-spacing:.06em}
@@ -52,13 +52,18 @@ h1{font-size:30px} h2{font-size:21px}
 .linkbtn{background:none;color:var(--slate);text-decoration:underline;font-size:15px;padding:8px}
 /* 投影 */
 body.host .wrap{max-width:none;padding-block:2.2vh}
-body.host .brand{font-size:clamp(15px,1.2vw,22px)}
+body.host h1{font-size:clamp(36px,3.4vw,64px)}
+body.host .btn{font-size:clamp(20px,1.6vw,30px);padding:1.6vh 2.4vw}
+body.host .panel{padding:4vh 3vw}
+body.host .panel.center{max-width:min(1000px,80vw)!important;min-width:min(720px,80vw)}
+body.host .brand{font-size:clamp(18px,1.5vw,28px)}
+body.host .brand::before{width:28px;height:28px}
 .stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3vw;align-items:center;flex:1}
 .qrbox{background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px;width:min(72vh,46vw);aspect-ratio:1;display:grid;place-items:center;box-shadow:0 12px 40px #05003814}
 .qrbox img,.qrbox canvas,.wallqr img,.wallqr canvas{width:100%!important;height:auto!important}
-.count{font-size:clamp(80px,11vw,200px);font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--ink-deep);font-variant-numeric:tabular-nums}
+.count{font-size:clamp(100px,13vw,240px);font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--ink-deep);font-variant-numeric:tabular-nums}
 .count small{font-size:.38em;color:var(--mute);letter-spacing:-.02em}
-.hint{font-size:clamp(18px,1.6vw,28px);font-weight:600;color:var(--slate)}
+.hint{font-size:clamp(22px,2vw,36px);font-weight:600;color:var(--slate)}
 .copy{text-align:center;color:var(--mute);font-size:12px;letter-spacing:.06em;margin-top:auto;padding-top:8px}
 /* 留言牆：每則是一張便利貼 */
 .compose{display:grid;gap:10px}
@@ -72,13 +77,14 @@ body.host .brand{font-size:clamp(15px,1.2vw,22px)}
 .tabs button.on{background:var(--ink);color:#fff}
 .feed{display:grid;gap:12px}
 .msg{--c:var(--n1);background:var(--c);border-radius:4px 4px 16px 4px;padding:16px 18px;white-space:pre-wrap;word-break:break-word;color:var(--ink);
-  box-shadow:0 1px 1px #0000000d,0 6px 14px -6px #05003833;transform:rotate(var(--r,0deg));font-weight:600;line-height:1.5}
+  box-shadow:0 1px 1px #0000000d,0 6px 14px -6px #05003833;transform:rotate(var(--r,0deg));font-weight:600;line-height:1.5;font-size:18px}
 .msg.c0{--r:-.3deg} .msg.c1{--c:var(--n2);--r:.6deg} .msg.c2{--c:var(--n3);--r:-.5deg}
 .msg.c3{--c:var(--n4);--r:.4deg} .msg.c4{--c:var(--n5);--r:-.6deg} .msg.c5{--c:var(--n6);--r:.3deg}
 .msg .foot{display:flex;align-items:center;gap:8px;margin-top:12px;white-space:normal}
 .msg time{font-size:12px;font-weight:500;color:#00000073;margin-right:auto}
 .like{display:inline-flex;align-items:center;gap:6px;background:#ffffffb3;border:1px solid #0000001a;color:var(--ink);border-radius:9999px;padding:4px 12px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .like.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.done-tag{font-size:13px;font-weight:700;color:#00704a;background:#ffffffb3;border-radius:9999px;padding:4px 10px}
 .act{background:#ffffffb3;border:1px solid #0000001a;color:var(--ink);border-radius:9999px;padding:4px 12px;font-size:13px;font-weight:700}
 .act.done:hover{background:var(--ok);color:#fff;border-color:var(--ok)}
 .act.x:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
@@ -86,18 +92,21 @@ body.host .brand{font-size:clamp(15px,1.2vw,22px)}
 @keyframes pop{from{transform:scale(.85) rotate(-3deg);opacity:0}}
 .wallhead{display:flex;align-items:center;gap:2vw}
 .wallhead .grow{flex:1;display:grid;gap:.8vh}
-.wallqr{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;width:clamp(120px,12vw,210px);aspect-ratio:1;box-shadow:0 8px 24px #05003814}
+.wallqr{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;width:clamp(150px,14vw,260px);aspect-ratio:1;box-shadow:0 8px 24px #05003814}
 .sound{background:var(--yellow-l);color:var(--ink);font-size:13px;font-weight:700;padding:5px 12px;border-radius:9999px}
-body.host .wallhead h1{font-size:clamp(34px,3.6vw,68px);letter-spacing:-.03em}
-body.host h1.big{font-size:clamp(36px,4vw,76px);letter-spacing:-.03em}
+body.host .wallhead h1{font-size:clamp(40px,4.4vw,84px);letter-spacing:-.03em}
+body.host h1.big{font-size:clamp(44px,5vw,96px);letter-spacing:-.03em}
 body.host h1 mark{background:linear-gradient(transparent 58%,var(--yellow) 58%);color:inherit;padding:0 .08em}
-body.host .wallhead .hint{font-size:clamp(15px,1.25vw,22px)}
-body.host .wallhead .btn.sm{font-size:clamp(14px,1.1vw,20px);padding:1.1vh 1.4vw}
-body.host .tabs button{font-size:clamp(14px,1vw,18px)}
-body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));align-items:start;flex:1;align-content:start;overflow:auto;gap:1.6vw;padding:6px}
-body.host .msg{font-size:clamp(20px,1.85vw,34px);padding:2.4vh 1.5vw;min-height:16vh;display:flex;flex-direction:column;justify-content:space-between}
-body.host .msg time{font-size:clamp(12px,.9vw,16px)}
-body.host .like{font-size:clamp(14px,1.1vw,20px)}
+body.host .wallhead .hint{font-size:clamp(20px,1.7vw,32px)}
+body.host #meta{font-size:clamp(17px,1.4vw,26px)}
+body.host .sound{font-size:clamp(15px,1.2vw,22px);padding:6px 14px}
+body.host .wallhead .btn.sm{font-size:clamp(17px,1.4vw,26px);padding:1.3vh 1.6vw}
+body.host .tabs button{font-size:clamp(17px,1.35vw,24px);padding:.7vh 1.2vw}
+body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));align-items:start;flex:1;align-content:start;overflow:auto;gap:1.6vw;padding:6px}
+body.host .msg{font-size:clamp(26px,2.4vw,46px);padding:2.4vh 1.5vw;min-height:16vh;display:flex;flex-direction:column;justify-content:space-between}
+body.host .msg time{font-size:clamp(15px,1.1vw,20px)}
+body.host .like{font-size:clamp(17px,1.4vw,26px);padding:.4vh 1vw}
+body.host .act{font-size:clamp(15px,1.15vw,21px);padding:.4vh .9vw}
 @media (max-width:760px){.stage{grid-template-columns:1fr}.qrbox{width:100%}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -135,7 +144,7 @@ const msgHTML = (m, host) => `<div class="msg c${m.id % 6}" data-id="${m.id}">${
     ${host ? `<span class="like">♥ ${m.likes}</span>
       <button class="act done" data-answer="${m.id}" title="已回覆：從畫面拿掉，紀錄保留">✓ 已回覆</button>
       <button class="act x" data-hide="${m.id}" title="不當留言：從畫面拿掉，紀錄保留">✕</button>`
-    : `<button class="like${m.mine ? " on" : ""}" data-like="${m.id}" aria-pressed="${m.mine}">♥ ${m.likes}</button>`}
+    : `${m.answered ? `<span class="done-tag">✓ 老師已回覆</span>` : ""}<button class="like${m.mine ? " on" : ""}" data-like="${m.id}" aria-pressed="${m.mine}">♥ ${m.likes}</button>`}
   </div></div>`;
 /* 有變才重畫；新出現的留言加動畫。回傳這次新增幾則 */
 function makeFeed(el, host){
@@ -143,7 +152,7 @@ function makeFeed(el, host){
   const draw = () => {
     const list = [...last];
     if(sort === "top") list.sort((a, b) => b.likes - a.likes || b.id - a.id);
-    const s = sort + JSON.stringify(list.map(m => [m.id, m.likes, m.mine]));
+    const s = sort + JSON.stringify(list.map(m => [m.id, m.likes, m.mine, m.answered]));
     if(s === sig) return 0; sig = s;
     let fresh = 0;
     el.innerHTML = list.map(m => msgHTML(m, host)).join("");
