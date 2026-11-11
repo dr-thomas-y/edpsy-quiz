@@ -74,6 +74,7 @@ body.host .wrap{max-width:none;padding-block:2.2vh}
 .wallhead .grow{flex:1;display:grid;gap:.6vh}
 .wallqr{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;width:clamp(120px,13vw,220px);aspect-ratio:1}
 .wallqr img,.wallqr canvas{width:100%!important;height:auto!important}
+body.host .wallhead .btn.sm{font-size:clamp(16px,1.3vw,24px);padding:1.2vh 1.4vw}
 body.host .wallhead .brand{font-size:clamp(28px,3vw,56px)}
 body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));align-items:start;flex:1;align-content:start;overflow:auto}
 body.host .msg{font-size:clamp(20px,1.9vw,36px);font-weight:700;line-height:1.4;padding:2vh 1.4vw}
@@ -292,8 +293,8 @@ function wallStudent(wall, sid, top=""){
   };
   const tick = async () => {
     let v;
-    try{ v = await rpc("wall_list", {p_wall:wall}); } catch(e){ return void (timer = setTimeout(tick, 4000)); }
-    if(!v) return fail(new Error("no_wall"));
+    try{ v = await rpc("wall_list", {p_wall:wall, p_sid:sid}); }
+    catch(e){ if(e.message === "not_checked_in" || e.message === "no_wall"){ store.del("wall_pass"); return askWallSid(wall, MSG[e.message]); } return void (timer = setTimeout(tick, 4000)); }
     renderFeed($("#feed"), v.msgs, false);
     if(v.closed){ $(".compose").innerHTML = `<h2>${MSG.wall_closed}</h2>`; return; }
     timer = setTimeout(tick, 3000);
