@@ -190,26 +190,29 @@ function host(){
     catch(e){ $("#e").textContent = "連線失敗，請再按一次。"; }
   };
 }
-function projection(sid){
+function projection(sid, late){
   app.innerHTML = `<div class="stage">
       <div class="qrbox" id="qr"></div>
       <div style="display:grid;gap:3vh">
-        <div class="brand">教育心理學課堂點名</div>
-        <h1 class="big">手機掃碼，<mark>輸入學號</mark></h1>
+        <div class="brand">教育心理學課堂${late ? "補點名" : "點名"}</div>
+        <h1 class="big">${late ? "補點名：" : ""}手機掃碼，<mark>輸入學號</mark></h1>
         <div><div class="muted hint">已簽到</div><div class="count" id="n">0<small> / 0</small></div></div>
-        <div><button class="btn ghost" id="close">結束點名</button></div>
+        <div><button class="btn ghost" id="close">${late ? "結束補點名" : "結束點名"}</button></div>
       </div></div>`;
   let last = "", timer;
   const tick = async () => {
     let v;
     try{ v = await rpc("rc_host_view_pub", {p_session:sid}); }
     catch(e){ if(e.message === "no_session"){ sessionStorage.removeItem("wall_host"); return host(); } return void (timer = setTimeout(tick, 3000)); }
-    if(v.closed) return wallHost(sid);
+    if(v.closed && !v.late){ clearTimeout(timer); return wallHost(sid); }
+    if(v.late && !late){ clearTimeout(timer); return projection(sid, true); }
     if(v.token !== last){ last = v.token; qr($("#qr"), `${location.origin}${location.pathname}?t=${v.token}`, 512); }
     $("#n").innerHTML = `${v.count}<small> / ${v.total}</small>`;
     timer = setTimeout(tick, 2000);
   };
-  $("#close").onclick = async () => {
+  $("#close").onclick = late ? async () => {
+    clearTimeout(timer); await rpc("rc_late_pub", {p_session:sid, p_on:false}).catch(() => {}); tick();
+  } : async () => {
     if(!confirm("確定結束點名？結束後不能再簽到，已簽到的同學可以繼續留言。")) return;
     unlockSound(); clearTimeout(timer); await rpc("rc_close_pub", {p_session:sid}); tick();
   };
@@ -221,6 +224,7 @@ function wallHost(sid){
         <h1>提問、回饋，<mark>隨時丟上來</mark></h1>
         <div class="hint">手機跳掉？掃右邊 QR 碼回來</div>
         <div class="bar" style="justify-content:flex-start"><span class="muted" id="meta"></span>${tabsHTML}<button class="sound" id="snd" hidden>🔔 點這裡開啟新留言提示音</button></div></div>
+      <button class="btn ghost sm" id="late">補點名</button>
       <button class="btn ghost sm" id="end">結束留言</button>
       <div class="wallqr" id="wq"></div></div>
     <div class="feed" id="feed"></div>`;
@@ -240,6 +244,9 @@ function wallHost(sid){
     if(!confirm("確定結束留言？之後同學就不能再留言了。")) return;
     clearTimeout(timer); await rpc("wall_close", {p_session:sid}); tick();
   };
+  $("#late").onclick = async () => {
+    clearTimeout(timer); await rpc("rc_late_pub", {p_session:sid, p_on:true}).catch(() => {}); projection(sid, true);
+  };
   const tick = async () => {
     let v;
     try{ v = await rpc("wall_host", {p_session:sid}); }
@@ -251,7 +258,7 @@ function wallHost(sid){
     if(v.closed){
       sessionStorage.removeItem("wall_host");
       $("#end").replaceWith(Object.assign(document.createElement("button"), {className:"btn sm", textContent:"開新的一場", onclick:() => host()}));
-      $("#wq").remove(); $(".hint").remove();
+      $("#wq").remove(); $(".hint").remove(); $("#late").remove();
       return;
     }
     timer = setTimeout(tick, 2500);
