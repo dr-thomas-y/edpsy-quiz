@@ -5,88 +5,97 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>教育心理學課堂點名・匿名留言</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-/* 依 Linear DESIGN.md：近黑底、淺灰字、薰衣草藍為唯一強調色、細線卡片、8px 圓角、無陰影 */
+/* 依 Miro DESIGN.md：白板底＋點格、馬卡龍便利貼、黑色膠囊主按鈕、亮黃為品牌點綴 */
 :root{
-  --canvas:#010102; --s1:#0f1011; --s2:#141516; --s3:#18191a;
-  --line:#23252a; --line-2:#34343a;
-  --ink:#f7f8f8; --ink-2:#d0d6e0; --mute:#8a8f98; --ink-3:#62666d;
-  --brand:#5e6ad2; --brand-h:#828fff; --ok:#27a644; --bad:#eb5757;
-  --body:"Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  color-scheme:dark;
+  --canvas:#ffffff; --surface:#f7f8fa; --line:#e0e2e8; --line-2:#c7cad5;
+  --ink:#1c1c1e; --ink-deep:#050038; --slate:#555a6a; --mute:#8e91a0;
+  --yellow:#ffd02f; --yellow-l:#fff4c4; --blue:#4262ff; --ok:#00b473; --bad:#e5484d;
+  --n1:#fff4c4; --n2:#ffd8f4; --n3:#c3faf5; --n4:#ffe6cd; --n5:#ffc6c6; --n6:#dfe5ff;
+  --body:"Plus Jakarta Sans","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);letter-spacing:-.01em;
+body{margin:0;color:var(--ink);font-family:var(--body);
+  background:radial-gradient(#d9dce5 1.2px,transparent 1.3px) 0 0/22px 22px,var(--surface);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
-button{font:inherit;cursor:pointer;border:0;letter-spacing:0}
-button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #5e69d180;outline-offset:2px}
+button{font:inherit;cursor:pointer;border:0}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .wrap{max-width:1180px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:20px;min-height:100%}
-.brand{font-weight:500;font-size:13px;letter-spacing:.04em;color:var(--mute)}
-.btn{background:var(--brand);color:#fff;font-weight:500;padding:12px 18px;border-radius:8px;font-size:16px;transition:background .12s;text-decoration:none;display:inline-block;text-align:center}
-.btn:hover{background:var(--brand-h)}
-.btn.ghost{background:var(--s1);color:var(--ink);border:1px solid var(--line)}
-.btn.ghost:hover{background:var(--s2);border-color:var(--line-2)}
-.btn.sm{padding:6px 12px;font-size:14px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:15px;color:var(--ink-deep)}
+.brand::before{content:"";width:22px;height:22px;border-radius:6px;background:var(--yellow);box-shadow:inset 0 0 0 2px #00000014}
+.btn{background:var(--ink);color:#fff;font-weight:700;padding:14px 24px;border-radius:9999px;font-size:17px;transition:transform .08s,background .12s;text-decoration:none;display:inline-block;text-align:center}
+.btn:hover{background:#000}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:var(--canvas);color:var(--ink);border:1.5px solid var(--line-2)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.sm{padding:8px 16px;font-size:14px}
 .btn[disabled]{opacity:.45;cursor:default}
-.panel{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:inset 0 1px 0 #ffffff0d}
-.muted{color:var(--mute)}
+.panel{background:var(--canvas);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 1px 2px #05003808,0 8px 24px #05003810}
+.muted{color:var(--slate)}
 .center{text-align:center}
-.err{color:var(--bad);font-weight:500;min-height:1.2em}
-h1,h2{margin:0;font-weight:600;letter-spacing:-.02em}
-h1{font-size:28px} h2{font-size:22px}
+.err{color:var(--bad);font-weight:700;min-height:1.2em}
+h1,h2{margin:0;color:var(--ink-deep);font-weight:800;letter-spacing:-.02em}
+h1{font-size:30px} h2{font-size:21px}
 .field{display:flex;flex-direction:column;gap:6px}
-.field label{font-weight:500;font-size:13px;color:var(--mute)}
-.field input{background:var(--canvas);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:12px;font-size:22px;font-family:var(--body);width:100%;letter-spacing:.06em}
+.field label{font-weight:700;font-size:13px;color:var(--slate)}
+.field input{background:var(--canvas);border:1.5px solid var(--line-2);color:var(--ink);border-radius:10px;padding:13px;font-size:22px;font-family:var(--body);width:100%;letter-spacing:.06em}
+.field input:focus{border-color:var(--blue);outline:none}
 .phone{max-width:480px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:16px}
 .phone .btn{width:100%}
-.check{width:96px;height:96px;border-radius:50%;margin:0 auto;display:grid;place-items:center;font-size:52px;color:var(--ok);background:#27a6441f;border:1px solid #27a64466}
-.check.no{color:var(--bad);background:#eb57571f;border-color:#eb575766}
-.who{font-size:30px;font-weight:600;letter-spacing:.08em}
-.linkbtn{background:none;color:var(--mute);text-decoration:underline;font-size:15px;padding:8px}
+.check{width:96px;height:96px;border-radius:50%;margin:0 auto;display:grid;place-items:center;font-size:52px;font-weight:800;color:#fff;background:var(--ok)}
+.check.no{background:var(--bad)}
+.who{font-size:30px;font-weight:800;letter-spacing:.08em;color:var(--ink-deep)}
+.linkbtn{background:none;color:var(--slate);text-decoration:underline;font-size:15px;padding:8px}
 /* 投影 */
 body.host .wrap{max-width:none;padding-block:2.2vh}
-body.host .brand{font-size:clamp(14px,1.1vw,20px)}
+body.host .brand{font-size:clamp(15px,1.2vw,22px)}
 .stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3vw;align-items:center;flex:1}
-.qrbox{background:#fff;border-radius:16px;padding:18px;width:min(72vh,46vw);aspect-ratio:1;display:grid;place-items:center}
+.qrbox{background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px;width:min(72vh,46vw);aspect-ratio:1;display:grid;place-items:center;box-shadow:0 12px 40px #05003814}
 .qrbox img,.qrbox canvas,.wallqr img,.wallqr canvas{width:100%!important;height:auto!important}
-.count{font-size:clamp(80px,11vw,200px);font-weight:600;letter-spacing:-.04em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
-.count small{font-size:.4em;color:var(--ink-3);letter-spacing:-.02em}
-.hint{font-size:clamp(18px,1.6vw,28px);font-weight:500;color:var(--ink-2)}
-.copy{text-align:center;color:var(--ink-3);font-size:12px;letter-spacing:.06em;margin-top:auto;padding-top:8px}
-/* 留言牆 */
+.count{font-size:clamp(80px,11vw,200px);font-weight:800;letter-spacing:-.04em;line-height:1;color:var(--ink-deep);font-variant-numeric:tabular-nums}
+.count small{font-size:.38em;color:var(--mute);letter-spacing:-.02em}
+.hint{font-size:clamp(18px,1.6vw,28px);font-weight:600;color:var(--slate)}
+.copy{text-align:center;color:var(--mute);font-size:12px;letter-spacing:.06em;margin-top:auto;padding-top:8px}
+/* 留言牆：每則是一張便利貼 */
 .compose{display:grid;gap:10px}
-.compose textarea{background:var(--canvas);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:12px;font-size:17px;font-family:var(--body);width:100%;min-height:96px;resize:vertical}
-.compose textarea::placeholder{color:var(--ink-3)}
-.cnt{font-size:12px;color:var(--ink-3);text-align:right}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.tabs{display:inline-flex;gap:4px;background:var(--canvas);border:1px solid var(--line);border-radius:9999px;padding:3px}
-.tabs button{background:none;color:var(--mute);padding:5px 14px;border-radius:9999px;font-size:14px;font-weight:500}
-.tabs button.on{background:var(--s3);color:var(--ink)}
-.feed{display:grid;gap:10px}
-.msg{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px 16px;white-space:pre-wrap;word-break:break-word;box-shadow:inset 0 1px 0 #ffffff0a}
-.msg .foot{display:flex;align-items:center;gap:10px;margin-top:10px;white-space:normal}
-.msg time{font-size:12px;color:var(--ink-3);margin-right:auto}
-.like{display:inline-flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--line);color:var(--ink-2);border-radius:9999px;padding:4px 12px;font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
-.like.on{border-color:var(--brand);color:var(--brand-h);background:#5e6ad21f}
-.act{background:var(--s2);border:1px solid var(--line);color:var(--ink-2);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:500}
-.act:hover{border-color:var(--line-2);color:var(--ink)}
-.act.done:hover{border-color:var(--ok);color:var(--ok)}
-.act.x:hover{border-color:var(--bad);color:var(--bad)}
-.msg.new{animation:pop .5s ease-out}
-@keyframes pop{from{border-color:var(--brand);transform:translateY(-4px);opacity:0}}
+.compose textarea{background:var(--yellow-l);border:1.5px solid #f3e3a0;color:var(--ink);border-radius:12px;padding:14px;font-size:17px;font-family:var(--body);width:100%;min-height:104px;resize:vertical}
+.compose textarea:focus{border-color:var(--yellow);outline:none;box-shadow:0 0 0 3px #ffd02f55}
+.compose textarea::placeholder{color:#8a7a3a}
+.cnt{font-size:12px;color:var(--mute);text-align:right}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tabs{display:inline-flex;gap:2px;background:var(--canvas);border:1px solid var(--line);border-radius:9999px;padding:3px}
+.tabs button{background:none;color:var(--slate);padding:6px 14px;border-radius:9999px;font-size:14px;font-weight:700}
+.tabs button.on{background:var(--ink);color:#fff}
+.feed{display:grid;gap:12px}
+.msg{--c:var(--n1);background:var(--c);border-radius:4px 4px 16px 4px;padding:16px 18px;white-space:pre-wrap;word-break:break-word;color:var(--ink);
+  box-shadow:0 1px 1px #0000000d,0 6px 14px -6px #05003833;transform:rotate(var(--r,0deg));font-weight:600;line-height:1.5}
+.msg.c0{--r:-.3deg} .msg.c1{--c:var(--n2);--r:.6deg} .msg.c2{--c:var(--n3);--r:-.5deg}
+.msg.c3{--c:var(--n4);--r:.4deg} .msg.c4{--c:var(--n5);--r:-.6deg} .msg.c5{--c:var(--n6);--r:.3deg}
+.msg .foot{display:flex;align-items:center;gap:8px;margin-top:12px;white-space:normal}
+.msg time{font-size:12px;font-weight:500;color:#00000073;margin-right:auto}
+.like{display:inline-flex;align-items:center;gap:6px;background:#ffffffb3;border:1px solid #0000001a;color:var(--ink);border-radius:9999px;padding:4px 12px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.like.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.act{background:#ffffffb3;border:1px solid #0000001a;color:var(--ink);border-radius:9999px;padding:4px 12px;font-size:13px;font-weight:700}
+.act.done:hover{background:var(--ok);color:#fff;border-color:var(--ok)}
+.act.x:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
+.msg.new{animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.85) rotate(-3deg);opacity:0}}
 .wallhead{display:flex;align-items:center;gap:2vw}
 .wallhead .grow{flex:1;display:grid;gap:.8vh}
-.wallqr{background:#fff;border-radius:12px;padding:8px;width:clamp(120px,12vw,210px);aspect-ratio:1}
-.sound{background:none;color:var(--mute);font-size:13px;padding:4px 0}
-body.host .wallhead h1{font-size:clamp(32px,3.4vw,64px);letter-spacing:-.03em}
+.wallqr{background:#fff;border:1px solid var(--line);border-radius:16px;padding:8px;width:clamp(120px,12vw,210px);aspect-ratio:1;box-shadow:0 8px 24px #05003814}
+.sound{background:var(--yellow-l);color:var(--ink);font-size:13px;font-weight:700;padding:5px 12px;border-radius:9999px}
+body.host .wallhead h1{font-size:clamp(34px,3.6vw,68px);letter-spacing:-.03em}
+body.host h1.big{font-size:clamp(36px,4vw,76px);letter-spacing:-.03em}
+body.host h1 mark{background:linear-gradient(transparent 58%,var(--yellow) 58%);color:inherit;padding:0 .08em}
 body.host .wallhead .hint{font-size:clamp(15px,1.25vw,22px)}
-body.host .wallhead .btn.sm{font-size:clamp(14px,1.1vw,20px);padding:1vh 1.2vw}
+body.host .wallhead .btn.sm{font-size:clamp(14px,1.1vw,20px);padding:1.1vh 1.4vw}
 body.host .tabs button{font-size:clamp(14px,1vw,18px)}
-body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));align-items:start;flex:1;align-content:start;overflow:auto;gap:1.2vw}
-body.host .msg{font-size:clamp(20px,1.85vw,34px);font-weight:500;line-height:1.45;padding:2.2vh 1.4vw;letter-spacing:-.01em}
+body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));align-items:start;flex:1;align-content:start;overflow:auto;gap:1.6vw;padding:6px}
+body.host .msg{font-size:clamp(20px,1.85vw,34px);padding:2.4vh 1.5vw;min-height:16vh;display:flex;flex-direction:column;justify-content:space-between}
 body.host .msg time{font-size:clamp(12px,.9vw,16px)}
 body.host .like{font-size:clamp(14px,1.1vw,20px)}
 @media (max-width:760px){.stage{grid-template-columns:1fr}.qrbox{width:100%}}
@@ -121,7 +130,7 @@ function bindTabs(onChange){
     [...$("#tabs").children].forEach(b => b.classList.toggle("on", b === e.target)); onChange(k);
   };
 }
-const msgHTML = (m, host) => `<div class="msg" data-id="${m.id}">${esc(m.body)}<div class="foot">
+const msgHTML = (m, host) => `<div class="msg c${m.id % 6}" data-id="${m.id}">${esc(m.body)}<div class="foot">
     <time>${esc(hhmm(m.at).slice(0,5))}</time>
     ${host ? `<span class="like">♥ ${m.likes}</span>
       <button class="act done" data-answer="${m.id}" title="已回覆：從畫面拿掉，紀錄保留">✓ 已回覆</button>
@@ -165,7 +174,7 @@ function host(){
   const resume = sessionStorage.getItem("wall_host");
   if(resume) return projection(resume);
   app.innerHTML = `<div class="panel center" style="margin:auto;display:grid;gap:18px;max-width:560px">
-    <div class="brand">EDUCATIONAL PSYCHOLOGY</div><h1>教育心理學課堂點名</h1><button class="btn" id="open">開始點名</button><div class="err" id="e"></div></div>`;
+    <h1>教育心理學課堂點名</h1><button class="btn" id="open">開始點名</button><div class="err" id="e"></div></div>`;
   $("#open").onclick = async () => {
     unlockSound();
     try{ const s = await rpc("rc_open_pub"); sessionStorage.setItem("wall_host", s.id); projection(s.id); }
@@ -177,7 +186,7 @@ function projection(sid){
       <div class="qrbox" id="qr"></div>
       <div style="display:grid;gap:3vh">
         <div class="brand">教育心理學課堂點名</div>
-        <div class="hint">手機掃 QR 碼，輸入學號</div>
+        <h1 class="big">手機掃碼，<mark>輸入學號</mark></h1>
         <div><div class="muted hint">已簽到</div><div class="count" id="n">0<small> / 0</small></div></div>
         <div><button class="btn ghost" id="close">結束點名</button></div>
       </div></div>`;
@@ -200,8 +209,8 @@ function projection(sid){
 function wallHost(sid){
   app.innerHTML = `<div class="wallhead">
       <div class="grow"><div class="brand">教育心理學・匿名留言牆</div>
-        <h1>有問題，隨時丟上來</h1>
-        <div class="hint">手機跳掉的同學，掃右邊 QR 碼輸入學號回來</div>
+        <h1>提問、回饋，<mark>隨時丟上來</mark></h1>
+        <div class="hint">手機跳掉？掃右邊 QR 碼回來</div>
         <div class="bar" style="justify-content:flex-start"><span class="muted" id="meta"></span>${tabsHTML}<button class="sound" id="snd" hidden>🔔 點這裡開啟新留言提示音</button></div></div>
       <button class="btn ghost sm" id="end">結束留言</button>
       <div class="wallqr" id="wq"></div></div>
@@ -303,7 +312,7 @@ function enterWall(wall){
   askWallSid(wall);
 }
 function askWallSid(wall, err=""){
-  app.innerHTML = `<div class="phone panel"><h2>回到匿名留言牆</h2>
+  app.innerHTML = `<div class="phone panel"><h2>回到留言牆</h2>
     <div class="muted">輸入今天簽到用的學號</div>
     <div class="field"><label for="sid">學號</label><input id="sid" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12" value="${esc(store.get("rc_sid") || "")}"></div>
     <div class="err" id="e">${esc(err)}</div><button class="btn" id="go">進入</button></div>`;
@@ -318,8 +327,8 @@ function askWallSid(wall, err=""){
 function wallStudent(wall, sid, top=""){
   app.innerHTML = `<div class="phone">${top}
     <div class="panel compose"><h2>匿名留言</h2>
-      <div class="muted" style="font-size:14px">大螢幕和同學都看不到你是誰。整堂課隨時可以留言、提問，也可以替別人的問題按讚。</div>
-      <textarea id="body" maxlength="200" placeholder="想問的、想說的，寫在這裡"></textarea>
+      <div class="muted" style="font-size:14px">提問、回饋都歡迎，不會顯示你是誰。</div>
+      <textarea id="body" maxlength="200" placeholder="想問的、想說的，都寫這裡"></textarea>
       <div class="cnt" id="cnt">0 / 200</div>
       <div class="err" id="e"></div>
       <button class="btn" id="send">送出</button></div>
