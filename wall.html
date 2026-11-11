@@ -84,6 +84,7 @@ body.host .brand::before{width:28px;height:28px}
 .msg time{font-size:12px;font-weight:500;color:#00000073;margin-right:auto}
 .like{display:inline-flex;align-items:center;gap:6px;background:#ffffffb3;border:1px solid #0000001a;color:var(--ink);border-radius:9999px;padding:4px 12px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .like.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.msg.answered{opacity:.5;transform:none}
 .done-tag{font-size:13px;font-weight:700;color:#00704a;background:#ffffffb3;border-radius:9999px;padding:4px 10px}
 .act{background:#ffffffb3;border:1px solid #0000001a;color:var(--ink);border-radius:9999px;padding:4px 12px;font-size:13px;font-weight:700}
 .act.done:hover{background:var(--ok);color:#fff;border-color:var(--ok)}
@@ -133,33 +134,36 @@ async function rpc(fn, args){
 const qr = (el, text, size) => { el.innerHTML = ""; new QRCode(el, {text, width:size, height:size, correctLevel:QRCode.CorrectLevel.M}); };
 const wallUrl = w => `${location.origin}${location.pathname}?w=${w}`;
 const tabsHTML = `<div class="tabs" id="tabs"><button data-sort="new" class="on">最新</button><button data-sort="top">最多讚</button></div>`;
-function bindTabs(onChange){
-  $("#tabs").onclick = e => {
+const showHTML = `<div class="tabs" id="show"><button data-sort="open" class="on">未回覆</button><button data-sort="all">全部</button></div>`;
+function bindTabs(onChange, id = "tabs"){
+  $("#" + id).onclick = e => {
     const k = e.target.dataset.sort; if(!k) return;
-    [...$("#tabs").children].forEach(b => b.classList.toggle("on", b === e.target)); onChange(k);
+    [...$("#" + id).children].forEach(b => b.classList.toggle("on", b === e.target)); onChange(k);
   };
 }
-const msgHTML = (m, host) => `<div class="msg c${m.id % 6}" data-id="${m.id}">${esc(m.body)}<div class="foot">
+const msgHTML = (m, host) => `<div class="msg c${m.id % 6}${host && m.answered ? " answered" : ""}" data-id="${m.id}">${esc(m.body)}<div class="foot">
     <time>${esc(hhmm(m.at).slice(0,5))}</time>
     ${host ? `<span class="like">♥ ${m.likes}</span>
-      <button class="act done" data-answer="${m.id}" title="已回覆：從畫面拿掉，紀錄保留">✓ 已回覆</button>
+      ${m.answered ? `<span class="done-tag">✓ 已回覆</span>` : `<button class="act done" data-answer="${m.id}" title="已回覆：從畫面拿掉，紀錄保留">✓ 已回覆</button>`}
       <button class="act x" data-hide="${m.id}" title="不當留言：從畫面拿掉，紀錄保留">✕</button>`
     : `${m.answered ? `<span class="done-tag">✓ 老師已回覆</span>` : ""}<button class="like${m.mine ? " on" : ""}" data-like="${m.id}" aria-pressed="${m.mine}">♥ ${m.likes}</button>`}
   </div></div>`;
 /* 有變才重畫；新出現的留言加動畫。回傳這次新增幾則 */
 function makeFeed(el, host){
-  const seen = new Set(); let sig = "", first = true, sort = "new", last = [];
+  const seen = new Set(); let sig = "", first = true, sort = "new", show = host ? "open" : "all", last = [];
   const draw = () => {
-    const list = [...last];
+    const list = last.filter(m => show === "all" || !m.answered);
     if(sort === "top") list.sort((a, b) => b.likes - a.likes || b.id - a.id);
-    const s = sort + JSON.stringify(list.map(m => [m.id, m.likes, m.mine, m.answered]));
+    const s = sort + show + JSON.stringify(list.map(m => [m.id, m.likes, m.mine, m.answered]));
     if(s === sig) return 0; sig = s;
     let fresh = 0;
     el.innerHTML = list.map(m => msgHTML(m, host)).join("");
-    list.forEach(m => { if(!seen.has(m.id)){ seen.add(m.id); if(!first){ fresh++; el.querySelector(`[data-id="${m.id}"]`).classList.add("new"); } } });
+    last.forEach(m => { if(!seen.has(m.id)){ seen.add(m.id); if(!first){ fresh++; el.querySelector(`[data-id="${m.id}"]`)?.classList.add("new"); } } });
     first = false; return fresh;
   };
-  return { update: msgs => (last = msgs, draw()), sort: k => (sort = k, draw()), drop: id => (last = last.filter(m => m.id !== id), draw()) };
+  return { update: msgs => (last = msgs, draw()), sort: k => (sort = k, draw()), show: k => (show = k, draw()),
+    drop: id => (last = last.filter(m => m.id !== id), draw()),
+    answer: id => (last = last.map(m => m.id === id ? {...m, answered: true} : m), draw()) };
 }
 
 /* 新留言提示音：只在投影端，兩個短促的高音，約 0.25 秒 */
@@ -195,7 +199,7 @@ function projection(sid, late){
       <div class="qrbox" id="qr"></div>
       <div style="display:grid;gap:3vh">
         <div class="brand">教育心理學課堂${late ? "補點名" : "點名"}</div>
-        <h1 class="big">${late ? "補點名：" : ""}手機掃碼，<mark>輸入學號</mark></h1>
+        <h1 class="big">${late ? "補點名" : "手機掃碼"}，<mark>輸入學號</mark></h1>
         <div><div class="muted hint">已簽到</div><div class="count" id="n">0<small> / 0</small></div></div>
         <div><button class="btn ghost" id="close">${late ? "結束補點名" : "結束點名"}</button></div>
       </div></div>`;
@@ -223,7 +227,7 @@ function wallHost(sid){
       <div class="grow"><div class="brand">教育心理學・匿名留言牆</div>
         <h1>提問、回饋，<mark>隨時丟上來</mark></h1>
         <div class="hint">手機跳掉？掃右邊 QR 碼回來</div>
-        <div class="bar" style="justify-content:flex-start"><span class="muted" id="meta"></span>${tabsHTML}<button class="sound" id="snd" hidden>🔔 點這裡開啟新留言提示音</button></div></div>
+        <div class="bar" style="justify-content:flex-start"><span class="muted" id="meta"></span>${tabsHTML}${showHTML}<button class="sound" id="snd" hidden>🔔 點這裡開啟新留言提示音</button></div></div>
       <button class="btn ghost sm" id="late">補點名</button>
       <button class="btn ghost sm" id="end">結束留言</button>
       <div class="wallqr" id="wq"></div></div>
@@ -231,13 +235,14 @@ function wallHost(sid){
   let wall = "", timer;
   const feed = makeFeed($("#feed"), true);
   bindTabs(feed.sort);
+  bindTabs(feed.show, "show");
   /* 重新整理過的投影頁，瀏覽器不讓網頁自己出聲，要先點一下 */
   const sndBtn = $("#snd");
   if(!actx || actx.state !== "running"){ sndBtn.hidden = false; sndBtn.onclick = () => unlockSound().then(() => { sndBtn.hidden = true; ding(); }); }
   $("#feed").onclick = async e => {
     const b = e.target.closest("button"); if(!b) return;
     const id = Number(b.dataset.answer || b.dataset.hide); if(!id) return;
-    feed.drop(id);
+    b.dataset.answer ? feed.answer(id) : feed.drop(id);
     await rpc(b.dataset.answer ? "wall_answer" : "wall_hide", {p_session:sid, p_msg:id}).catch(() => {});
   };
   $("#end").onclick = async () => {
