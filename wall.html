@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>教育心理學課堂點名・匿名留言</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* 與課堂搶答同一套亮色舞台 */
+:root{
+  --stage:#eef1fa; --stage-2:#ffffff; --line:#dde2f1; --ink:#1c1f3a; --mute:#646a8c;
+  --brand:#33358f; --brand-d:#23246b; --ok:#14966f; --bad:#e5484d; --gold:#f2b632;
+  --shadow:0 1px 2px #1c1f3a0f,0 10px 30px #33358f14;
+  --display:"Bungee","Noto Sans TC",system-ui,sans-serif;
+  --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(900px 500px at 85% -10%,#c9d2ff,transparent 70%),radial-gradient(700px 420px at -10% 110%,#ffe2b8,transparent 70%),var(--stage);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+button{font:inherit;cursor:pointer;border:0}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:20px;min-height:100%}
+.brand{font-weight:900;font-size:22px;letter-spacing:.04em;color:var(--brand)}
+.btn{background:var(--brand);color:#fff;font-weight:900;padding:14px 26px;border-radius:14px;font-size:18px;box-shadow:0 5px 0 var(--brand-d);transition:transform .08s;text-decoration:none;display:inline-block;text-align:center}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--brand-d)}
+.btn.ghost{background:var(--stage-2);color:var(--brand);border:2px solid var(--line);box-shadow:none}
+.btn.sm{padding:6px 12px;font-size:14px;border-radius:10px}
+.btn[disabled]{opacity:.45;cursor:default}
+.panel{background:var(--stage-2);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
+.muted{color:var(--mute)}
+.center{text-align:center}
+.err{color:var(--bad);font-weight:700;min-height:1.2em}
+h1,h2{margin:0}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:14px;color:var(--mute)}
+.field input{background:var(--stage);border:2px solid var(--line);color:var(--ink);border-radius:12px;padding:14px;font-size:22px;font-family:var(--body);width:100%;letter-spacing:.08em}
+.phone{max-width:480px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:16px}
+.phone .btn{width:100%}
+.check{width:120px;height:120px;border-radius:50%;margin:0 auto;display:grid;place-items:center;font-size:72px;color:#fff;background:var(--ok)}
+.check.no{background:var(--bad)}
+.who{font-size:34px;font-weight:900;letter-spacing:.1em}
+.linkbtn{background:none;color:var(--mute);text-decoration:underline;font-size:15px;padding:8px}
+/* 投影 */
+body.host .wrap{max-width:none;padding-block:2.2vh}
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3vw;align-items:center;flex:1}
+.qrbox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;width:min(72vh,46vw);aspect-ratio:1;display:grid;place-items:center}
+.qrbox img,.qrbox canvas{width:100%!important;height:auto!important}
+.count{font-family:var(--display);font-size:clamp(80px,11vw,200px);line-height:1;color:var(--brand);font-variant-numeric:tabular-nums}
+.count small{font-size:.4em;color:var(--mute)}
+.hint{font-size:clamp(18px,1.6vw,28px);font-weight:700}
+/* 紀錄 */
+.rec{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px}
+.rec th,.rec td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rec th{color:var(--mute);font-size:13px;letter-spacing:.06em}
+.rec tr.absent td{color:var(--bad)}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fff3d6;color:#8a5a00;margin-left:6px}
+.sess{display:flex;flex-wrap:wrap;gap:10px}
+.sess .btn.on{background:var(--brand);color:#fff}
+.copy{text-align:center;color:var(--mute);font-size:13px;letter-spacing:.08em;margin-top:auto;padding-top:8px}
+/* 留言牆 */
+.compose{display:grid;gap:10px}
+.compose textarea{background:var(--stage);border:2px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:18px;font-family:var(--body);width:100%;min-height:96px;resize:vertical}
+.cnt{font-size:13px;color:var(--mute);text-align:right}
+.feed{display:grid;gap:10px}
+.msg{background:var(--stage-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);white-space:pre-wrap;word-break:break-word;position:relative}
+.msg time{display:block;font-size:12px;color:var(--mute);margin-top:6px}
+.msg.new{animation:pop .4s ease-out}
+@keyframes pop{from{transform:scale(.96);opacity:0}}
+.wallhead{display:flex;align-items:center;gap:2vw}
+.wallhead .grow{flex:1;display:grid;gap:.6vh}
+.wallqr{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;width:clamp(120px,13vw,220px);aspect-ratio:1}
+.wallqr img,.wallqr canvas{width:100%!important;height:auto!important}
+body.host .wallhead .brand{font-size:clamp(28px,3vw,56px)}
+body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));align-items:start;flex:1;align-content:start;overflow:auto}
+body.host .msg{font-size:clamp(20px,1.9vw,36px);font-weight:700;line-height:1.4;padding:2vh 1.4vw}
+body.host .msg time{font-size:clamp(12px,.9vw,16px);font-weight:400}
+.msg .x{position:absolute;top:6px;right:8px;background:none;color:var(--mute);font-size:20px;opacity:0;padding:4px 8px}
+.msg:hover .x{opacity:1}
+@media (max-width:760px){.stage{grid-template-columns:1fr}.qrbox{width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app" style="display:flex;flex-direction:column;gap:20px;flex:1"></div><footer class="copy">© 袁齊笙博士版權所有</footer></div>
+<script>
+const SB_URL = "https://uqrivwblsrhqtlvobdmn.supabase.co";
+const SB_KEY = "sb_publishable_mQWkr11yVYAce8jpkeeZlg_kA6-8BKe";
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}}, set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)), del:k=>localStorage.removeItem(k)};
+const hhmm = t => new Date(t).toLocaleTimeString("zh-TW",{hour12:false});
+async function rpc(fn, args){
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
+    method:"POST", headers:{apikey:SB_KEY, "Content-Type":"application/json"}, body:JSON.stringify(args||{})
+  });
+  const t = await r.text(); const j = t ? JSON.parse(t) : null;
+  if(!r.ok) throw new Error((j && j.message) || r.statusText);
+  return j;
+}
+
+const qr = (el, text, size) => { el.innerHTML = ""; new QRCode(el, {text, width:size, height:size, correctLevel:QRCode.CorrectLevel.M}); };
+const wallUrl = w => `${location.origin}${location.pathname}?w=${w}`;
+const msgHTML = (m, host) => `<div class="msg" data-id="${m.id}">${host ? `<button class="x" title="從投影隱藏" data-hide="${m.id}">✕</button>` : ""}${esc(m.body)}<time>${esc(hhmm(m.at).slice(0,5))}</time></div>`;
+/* 只把新留言插到最上面，舊的不重畫，避免整牆閃動 */
+function renderFeed(el, msgs, host){
+  const keep = new Set(msgs.map(m => String(m.id)));
+  [...el.children].forEach(c => keep.has(c.dataset.id) || c.remove());
+  const have = new Set([...el.children].map(c => c.dataset.id));
+  const first = el.children.length === 0;
+  [...msgs].reverse().forEach(m => {
+    if(have.has(String(m.id))) return;
+    el.insertAdjacentHTML("afterbegin", msgHTML(m, host));
+    if(!first) el.firstElementChild.classList.add("new");
+  });
+}
+
+/* ---------- 投影端：任何人隨時可開一場；只有開場的這個頁面能結束它。
+   場次 id 存在這個分頁（sessionStorage），投影頁重新整理不會丟掉整場留言 ---------- */
+function host(){
+  document.body.classList.add("host");
+  const resume = sessionStorage.getItem("wall_host");
+  if(resume) return projection(resume);
+  app.innerHTML = `<div class="panel center" style="margin:auto;display:grid;gap:18px;max-width:560px">
+    <h1>教育心理學課堂點名</h1><button class="btn" id="open">開始點名</button><div class="err" id="e"></div></div>`;
+  $("#open").onclick = async () => {
+    try{ const s = await rpc("rc_open_pub"); sessionStorage.setItem("wall_host", s.id); projection(s.id); }
+    catch(e){ $("#e").textContent = "連線失敗，請再按一次。"; }
+  };
+}
+function projection(sid){
+  app.innerHTML = `<div class="stage">
+      <div class="qrbox" id="qr"></div>
+      <div style="display:grid;gap:3vh">
+        <div class="brand">教育心理學課堂點名</div>
+        <div class="hint">手機掃 QR 碼，輸入學號</div>
+        <div><div class="muted hint">已簽到</div><div class="count" id="n">0<small> / 0</small></div></div>
+        <div><button class="btn ghost" id="close">結束點名</button></div>
+      </div></div>`;
+  let last = "", timer;
+  const tick = async () => {
+    let v;
+    try{ v = await rpc("rc_host_view_pub", {p_session:sid}); }
+    catch(e){ if(e.message === "no_session"){ sessionStorage.removeItem("wall_host"); return host(); } return void (timer = setTimeout(tick, 3000)); }
+    if(v.closed) return wallHost(sid);
+    if(v.token !== last){ last = v.token; qr($("#qr"), `${location.origin}${location.pathname}?t=${v.token}`, 512); }
+    $("#n").innerHTML = `${v.count}<small> / ${v.total}</small>`;
+    timer = setTimeout(tick, 2000);
+  };
+  $("#close").onclick = async () => {
+    if(!confirm("確定結束點名？結束後不能再簽到，已簽到的同學可以繼續留言。")) return;
+    clearTimeout(timer); await rpc("rc_close_pub", {p_session:sid}); tick();
+  };
+  tick();
+}
+function wallHost(sid){
+  app.innerHTML = `<div class="wallhead">
+      <div class="grow"><div class="brand">匿名留言牆</div>
+        <div class="hint">已簽到的同學繼續在手機上留言；手機跳掉的，掃右邊 QR 碼輸入學號回來</div>
+        <div class="muted hint" id="meta"></div></div>
+      <button class="btn ghost sm" id="end">結束留言</button>
+      <div class="wallqr" id="wq"></div></div>
+    <div class="feed" id="feed"></div>`;
+  let wall = "", timer;
+  $("#feed").onclick = async e => {
+    const id = e.target.dataset && e.target.dataset.hide; if(!id) return;
+    e.target.closest(".msg").remove();
+    await rpc("wall_hide", {p_session:sid, p_msg:Number(id)}).catch(() => {});
+  };
+  $("#end").onclick = async () => {
+    if(!confirm("確定結束留言？之後同學就不能再留言了。")) return;
+    clearTimeout(timer); await rpc("wall_close", {p_session:sid}); tick();
+  };
+  const tick = async () => {
+    let v;
+    try{ v = await rpc("wall_host", {p_session:sid}); }
+    catch(e){ return void (timer = setTimeout(tick, 3000)); }
+    if(!v){ sessionStorage.removeItem("wall_host"); return host(); }
+    if(v.wall !== wall){ wall = v.wall; qr($("#wq"), wallUrl(wall), 300); }
+    $("#meta").textContent = `已簽到 ${v.count} / ${v.total}・留言 ${v.msgs.length} 則${v.closed ? "・留言已結束" : ""}`;
+    renderFeed($("#feed"), v.msgs, true);
+    if(v.closed){
+      sessionStorage.removeItem("wall_host");
+      $("#end").replaceWith(Object.assign(document.createElement("button"), {className:"btn sm", textContent:"開新的一場", onclick:() => host()}));
+      $("#wq").remove(); $(".hint").remove();
+      return;
+    }
+    timer = setTimeout(tick, 2500);
+  };
+  tick();
+}
+
+/* ---------- 學生端 ---------- */
+const MSG = {
+  expired: "QR 碼已過期，請重新掃描投影幕上的 QR 碼。",
+  closed: "點名已經結束。要回留言牆，請掃投影幕右上角的 QR 碼。",
+  not_on_roster: "這個學號不在修課名單上，請再確認一次。",
+  not_checked_in: "這個學號今天沒有簽到，不能進留言牆。",
+  no_wall: "找不到這個留言牆，請重新掃描投影幕上的 QR 碼。",
+  wall_closed: "留言已經結束，謝謝大家。",
+  too_fast: "留言太快了，等幾秒再送。",
+  empty: "請先寫點內容。"
+};
+const device = store.get("rc_dev") || (store.set("rc_dev", crypto.randomUUID()), store.get("rc_dev"));
+function student(tok){
+  if(!tok){ app.innerHTML = `<div class="phone panel center"><h2>請用手機相機掃描投影幕上的 QR 碼</h2></div>`; return; }
+  const saved = store.get("rc_sid");
+  saved ? confirmStep(tok, saved) : askSid(tok);
+}
+function askSid(tok, err=""){
+  app.innerHTML = `<div class="phone panel"><h2>課堂點名</h2>
+    <div class="field"><label for="sid">學號</label><input id="sid" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12"></div>
+    <div class="err" id="e">${esc(err)}</div><button class="btn" id="go">下一步</button></div>`;
+  const go = () => { const v = $("#sid").value.normalize("NFKC").trim().toUpperCase(); if(v) confirmStep(tok, v); };
+  $("#go").onclick = go; $("#sid").onkeydown = e => { if(e.key === "Enter") go(); };
+  $("#sid").focus();
+}
+async function confirmStep(tok, sid){
+  let r;
+  try{ r = await rpc("rc_check_in", {p_tok:tok, p_sid:sid, p_device:device, p_commit:false}); }
+  catch(e){ return e.message === "not_on_roster" ? (store.del("rc_sid"), askSid(tok, MSG.not_on_roster)) : fail(e); }
+  if(r.already) return done(r, sid, true);
+  app.innerHTML = `<div class="phone panel center" style="display:grid;gap:16px">
+    <div class="muted">${esc(sid)}</div><div class="who">${esc(r.name)}</div>
+    <button class="btn" id="ok">是我，確認簽到</button>
+    <button class="linkbtn" id="no">不是我，重新輸入學號</button></div>`;
+  $("#no").onclick = () => { store.del("rc_sid"); askSid(tok); };
+  $("#ok").onclick = async () => {
+    $("#ok").disabled = true;
+    try{ const d = await rpc("rc_check_in", {p_tok:tok, p_sid:sid, p_device:device, p_commit:true}); store.set("rc_sid", sid); done(d, sid, d.already); }
+    catch(e){ fail(e); }
+  };
+}
+/* 簽到成功：記住「哪一面牆、哪個學號」，網址換成留言牆網址。手機跳掉重開分頁，就直接回到牆上 */
+function done(r, sid, already){
+  store.set("wall_pass", {wall:r.wall, sid});
+  history.replaceState(null, "", `${location.pathname}?w=${r.wall}`);
+  wallStudent(r.wall, sid, `<div class="panel center" style="display:grid;gap:8px">
+    <div class="check" style="width:72px;height:72px;font-size:42px">✓</div><h2>${already ? "你已經簽到過了" : "簽到成功"}</h2>
+    <div class="who" style="font-size:24px">${esc(r.name)}</div><div class="muted">${esc(hhmm(r.at))}</div></div>`);
+}
+function fail(e){
+  history.replaceState(null, "", location.pathname);
+  app.innerHTML = `<div class="phone panel center" style="display:grid;gap:14px">
+    <div class="check no">!</div><h2>${esc(MSG[e.message] || "連線失敗，請重新掃描 QR 碼。")}</h2></div>`;
+}
+
+/* 從留言牆 QR 或重開的網址進來：同一支手機記得學號就直接進；換手機或記錄被清掉就問學號 */
+function enterWall(wall){
+  const p = store.get("wall_pass");
+  if(p && p.wall === wall) return wallStudent(wall, p.sid);
+  askWallSid(wall);
+}
+function askWallSid(wall, err=""){
+  app.innerHTML = `<div class="phone panel"><h2>回到匿名留言牆</h2>
+    <div class="muted">輸入今天簽到用的學號</div>
+    <div class="field"><label for="sid">學號</label><input id="sid" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="12" value="${esc(store.get("rc_sid") || "")}"></div>
+    <div class="err" id="e">${esc(err)}</div><button class="btn" id="go">進入</button></div>`;
+  const go = async () => {
+    const sid = $("#sid").value.normalize("NFKC").trim().toUpperCase(); if(!sid) return;
+    $("#go").disabled = true;
+    try{ await rpc("wall_enter", {p_wall:wall, p_sid:sid}); store.set("rc_sid", sid); store.set("wall_pass", {wall, sid}); wallStudent(wall, sid); }
+    catch(e){ e.message === "not_checked_in" ? askWallSid(wall, MSG.not_checked_in) : fail(e); }
+  };
+  $("#go").onclick = go; $("#sid").onkeydown = e => { if(e.key === "Enter") go(); };
+}
+function wallStudent(wall, sid, top=""){
+  app.innerHTML = `<div class="phone">${top}
+    <div class="panel compose"><h2>匿名留言</h2>
+      <div class="muted" style="font-size:14px">大螢幕和同學都看不到你是誰。整堂課隨時可以留言、提問。</div>
+      <textarea id="body" maxlength="200" placeholder="想問的、想說的，寫在這裡"></textarea>
+      <div class="cnt" id="cnt">0 / 200</div>
+      <div class="err" id="e"></div>
+      <button class="btn" id="send">送出</button></div>
+    <h2 style="margin-top:8px">大家的留言</h2>
+    <div class="feed" id="feed"></div></div>`;
+  let timer;
+  $("#body").oninput = () => $("#cnt").textContent = `${$("#body").value.length} / 200`;
+  $("#send").onclick = async () => {
+    const b = $("#body").value.trim(); if(!b) return void ($("#e").textContent = MSG.empty);
+    $("#send").disabled = true; $("#e").textContent = "";
+    try{ await rpc("wall_post", {p_wall:wall, p_sid:sid, p_body:b}); $("#body").value = ""; $("#cnt").textContent = "0 / 200"; clearTimeout(timer); tick(); }
+    catch(e){
+      if(e.message === "not_checked_in" || e.message === "no_wall"){ store.del("wall_pass"); return askWallSid(wall, MSG[e.message]); }
+      $("#e").textContent = MSG[e.message] || "沒送出去，請再按一次。";
+    }
+    $("#send").disabled = false;
+  };
+  const tick = async () => {
+    let v;
+    try{ v = await rpc("wall_list", {p_wall:wall}); } catch(e){ return void (timer = setTimeout(tick, 4000)); }
+    if(!v) return fail(new Error("no_wall"));
+    renderFeed($("#feed"), v.msgs, false);
+    if(v.closed){ $(".compose").innerHTML = `<h2>${MSG.wall_closed}</h2>`; return; }
+    timer = setTimeout(tick, 3000);
+  };
+  tick();
+}
+
+const qs = new URLSearchParams(location.search);
+if(qs.has("host")) host();
+else if(qs.get("w")) enterWall(qs.get("w"));
+else student(qs.get("t"));
+</script>
+</body>
+</html>
