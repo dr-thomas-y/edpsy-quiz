@@ -5,84 +5,92 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>教育心理學課堂點名・匿名留言</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-/* 與課堂搶答同一套亮色舞台 */
+/* 依 Linear DESIGN.md：近黑底、淺灰字、薰衣草藍為唯一強調色、細線卡片、8px 圓角、無陰影 */
 :root{
-  --stage:#eef1fa; --stage-2:#ffffff; --line:#dde2f1; --ink:#1c1f3a; --mute:#646a8c;
-  --brand:#33358f; --brand-d:#23246b; --ok:#14966f; --bad:#e5484d; --gold:#f2b632;
-  --shadow:0 1px 2px #1c1f3a0f,0 10px 30px #33358f14;
-  --display:"Bungee","Noto Sans TC",system-ui,sans-serif;
-  --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-  color-scheme:light;
+  --canvas:#010102; --s1:#0f1011; --s2:#141516; --s3:#18191a;
+  --line:#23252a; --line-2:#34343a;
+  --ink:#f7f8f8; --ink-2:#d0d6e0; --mute:#8a8f98; --ink-3:#62666d;
+  --brand:#5e6ad2; --brand-h:#828fff; --ok:#27a644; --bad:#eb5757;
+  --body:"Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:radial-gradient(900px 500px at 85% -10%,#c9d2ff,transparent 70%),radial-gradient(700px 420px at -10% 110%,#ffe2b8,transparent 70%),var(--stage);color:var(--ink);font-family:var(--body);
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);letter-spacing:-.01em;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
-button{font:inherit;cursor:pointer;border:0}
-button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+button{font:inherit;cursor:pointer;border:0;letter-spacing:0}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #5e69d180;outline-offset:2px}
 .wrap{max-width:1180px;margin:0 auto;padding-block:20px 32px;display:flex;flex-direction:column;gap:20px;min-height:100%}
-.brand{font-weight:900;font-size:22px;letter-spacing:.04em;color:var(--brand)}
-.btn{background:var(--brand);color:#fff;font-weight:900;padding:14px 26px;border-radius:14px;font-size:18px;box-shadow:0 5px 0 var(--brand-d);transition:transform .08s;text-decoration:none;display:inline-block;text-align:center}
-.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--brand-d)}
-.btn.ghost{background:var(--stage-2);color:var(--brand);border:2px solid var(--line);box-shadow:none}
-.btn.sm{padding:6px 12px;font-size:14px;border-radius:10px}
+.brand{font-weight:500;font-size:13px;letter-spacing:.04em;color:var(--mute)}
+.btn{background:var(--brand);color:#fff;font-weight:500;padding:12px 18px;border-radius:8px;font-size:16px;transition:background .12s;text-decoration:none;display:inline-block;text-align:center}
+.btn:hover{background:var(--brand-h)}
+.btn.ghost{background:var(--s1);color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--s2);border-color:var(--line-2)}
+.btn.sm{padding:6px 12px;font-size:14px}
 .btn[disabled]{opacity:.45;cursor:default}
-.panel{background:var(--stage-2);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
+.panel{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:inset 0 1px 0 #ffffff0d}
 .muted{color:var(--mute)}
 .center{text-align:center}
-.err{color:var(--bad);font-weight:700;min-height:1.2em}
-h1,h2{margin:0}
+.err{color:var(--bad);font-weight:500;min-height:1.2em}
+h1,h2{margin:0;font-weight:600;letter-spacing:-.02em}
+h1{font-size:28px} h2{font-size:22px}
 .field{display:flex;flex-direction:column;gap:6px}
-.field label{font-weight:700;font-size:14px;color:var(--mute)}
-.field input{background:var(--stage);border:2px solid var(--line);color:var(--ink);border-radius:12px;padding:14px;font-size:22px;font-family:var(--body);width:100%;letter-spacing:.08em}
+.field label{font-weight:500;font-size:13px;color:var(--mute)}
+.field input{background:var(--canvas);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:12px;font-size:22px;font-family:var(--body);width:100%;letter-spacing:.06em}
 .phone{max-width:480px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:16px}
 .phone .btn{width:100%}
-.check{width:120px;height:120px;border-radius:50%;margin:0 auto;display:grid;place-items:center;font-size:72px;color:#fff;background:var(--ok)}
-.check.no{background:var(--bad)}
-.who{font-size:34px;font-weight:900;letter-spacing:.1em}
+.check{width:96px;height:96px;border-radius:50%;margin:0 auto;display:grid;place-items:center;font-size:52px;color:var(--ok);background:#27a6441f;border:1px solid #27a64466}
+.check.no{color:var(--bad);background:#eb57571f;border-color:#eb575766}
+.who{font-size:30px;font-weight:600;letter-spacing:.08em}
 .linkbtn{background:none;color:var(--mute);text-decoration:underline;font-size:15px;padding:8px}
 /* 投影 */
 body.host .wrap{max-width:none;padding-block:2.2vh}
+body.host .brand{font-size:clamp(14px,1.1vw,20px)}
 .stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3vw;align-items:center;flex:1}
-.qrbox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;width:min(72vh,46vw);aspect-ratio:1;display:grid;place-items:center}
-.qrbox img,.qrbox canvas{width:100%!important;height:auto!important}
-.count{font-family:var(--display);font-size:clamp(80px,11vw,200px);line-height:1;color:var(--brand);font-variant-numeric:tabular-nums}
-.count small{font-size:.4em;color:var(--mute)}
-.hint{font-size:clamp(18px,1.6vw,28px);font-weight:700}
-/* 紀錄 */
-.rec{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px}
-.rec th,.rec td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
-.rec th{color:var(--mute);font-size:13px;letter-spacing:.06em}
-.rec tr.absent td{color:var(--bad)}
-.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fff3d6;color:#8a5a00;margin-left:6px}
-.sess{display:flex;flex-wrap:wrap;gap:10px}
-.sess .btn.on{background:var(--brand);color:#fff}
-.copy{text-align:center;color:var(--mute);font-size:13px;letter-spacing:.08em;margin-top:auto;padding-top:8px}
+.qrbox{background:#fff;border-radius:16px;padding:18px;width:min(72vh,46vw);aspect-ratio:1;display:grid;place-items:center}
+.qrbox img,.qrbox canvas,.wallqr img,.wallqr canvas{width:100%!important;height:auto!important}
+.count{font-size:clamp(80px,11vw,200px);font-weight:600;letter-spacing:-.04em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.count small{font-size:.4em;color:var(--ink-3);letter-spacing:-.02em}
+.hint{font-size:clamp(18px,1.6vw,28px);font-weight:500;color:var(--ink-2)}
+.copy{text-align:center;color:var(--ink-3);font-size:12px;letter-spacing:.06em;margin-top:auto;padding-top:8px}
 /* 留言牆 */
 .compose{display:grid;gap:10px}
-.compose textarea{background:var(--stage);border:2px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:18px;font-family:var(--body);width:100%;min-height:96px;resize:vertical}
-.cnt{font-size:13px;color:var(--mute);text-align:right}
+.compose textarea{background:var(--canvas);border:1px solid var(--line-2);color:var(--ink);border-radius:8px;padding:12px;font-size:17px;font-family:var(--body);width:100%;min-height:96px;resize:vertical}
+.compose textarea::placeholder{color:var(--ink-3)}
+.cnt{font-size:12px;color:var(--ink-3);text-align:right}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tabs{display:inline-flex;gap:4px;background:var(--canvas);border:1px solid var(--line);border-radius:9999px;padding:3px}
+.tabs button{background:none;color:var(--mute);padding:5px 14px;border-radius:9999px;font-size:14px;font-weight:500}
+.tabs button.on{background:var(--s3);color:var(--ink)}
 .feed{display:grid;gap:10px}
-.msg{background:var(--stage-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);white-space:pre-wrap;word-break:break-word;position:relative}
-.msg time{display:block;font-size:12px;color:var(--mute);margin-top:6px}
-.msg.new{animation:pop .4s ease-out}
-@keyframes pop{from{transform:scale(.96);opacity:0}}
+.msg{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px 16px;white-space:pre-wrap;word-break:break-word;box-shadow:inset 0 1px 0 #ffffff0a}
+.msg .foot{display:flex;align-items:center;gap:10px;margin-top:10px;white-space:normal}
+.msg time{font-size:12px;color:var(--ink-3);margin-right:auto}
+.like{display:inline-flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--line);color:var(--ink-2);border-radius:9999px;padding:4px 12px;font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
+.like.on{border-color:var(--brand);color:var(--brand-h);background:#5e6ad21f}
+.act{background:var(--s2);border:1px solid var(--line);color:var(--ink-2);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:500}
+.act:hover{border-color:var(--line-2);color:var(--ink)}
+.act.done:hover{border-color:var(--ok);color:var(--ok)}
+.act.x:hover{border-color:var(--bad);color:var(--bad)}
+.msg.new{animation:pop .5s ease-out}
+@keyframes pop{from{border-color:var(--brand);transform:translateY(-4px);opacity:0}}
 .wallhead{display:flex;align-items:center;gap:2vw}
-.wallhead .grow{flex:1;display:grid;gap:.6vh}
-.wallqr{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;width:clamp(120px,13vw,220px);aspect-ratio:1}
-.wallqr img,.wallqr canvas{width:100%!important;height:auto!important}
-body.host .wallhead .btn.sm{font-size:clamp(16px,1.3vw,24px);padding:1.2vh 1.4vw}
-body.host .wallhead .brand{font-size:clamp(28px,3vw,56px)}
-body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));align-items:start;flex:1;align-content:start;overflow:auto}
-body.host .msg{font-size:clamp(20px,1.9vw,36px);font-weight:700;line-height:1.4;padding:2vh 1.4vw}
-body.host .msg time{font-size:clamp(12px,.9vw,16px);font-weight:400}
-.msg .x{position:absolute;top:6px;right:8px;background:none;color:var(--mute);font-size:20px;opacity:0;padding:4px 8px}
-.msg:hover .x{opacity:1}
+.wallhead .grow{flex:1;display:grid;gap:.8vh}
+.wallqr{background:#fff;border-radius:12px;padding:8px;width:clamp(120px,12vw,210px);aspect-ratio:1}
+.sound{background:none;color:var(--mute);font-size:13px;padding:4px 0}
+body.host .wallhead h1{font-size:clamp(32px,3.4vw,64px);letter-spacing:-.03em}
+body.host .wallhead .hint{font-size:clamp(15px,1.25vw,22px)}
+body.host .wallhead .btn.sm{font-size:clamp(14px,1.1vw,20px);padding:1vh 1.2vw}
+body.host .tabs button{font-size:clamp(14px,1vw,18px)}
+body.host .feed{grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));align-items:start;flex:1;align-content:start;overflow:auto;gap:1.2vw}
+body.host .msg{font-size:clamp(20px,1.85vw,34px);font-weight:500;line-height:1.45;padding:2.2vh 1.4vw;letter-spacing:-.01em}
+body.host .msg time{font-size:clamp(12px,.9vw,16px)}
+body.host .like{font-size:clamp(14px,1.1vw,20px)}
 @media (max-width:760px){.stage{grid-template-columns:1fr}.qrbox{width:100%}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -106,19 +114,49 @@ async function rpc(fn, args){
 
 const qr = (el, text, size) => { el.innerHTML = ""; new QRCode(el, {text, width:size, height:size, correctLevel:QRCode.CorrectLevel.M}); };
 const wallUrl = w => `${location.origin}${location.pathname}?w=${w}`;
-const msgHTML = (m, host) => `<div class="msg" data-id="${m.id}">${host ? `<button class="x" title="從投影隱藏" data-hide="${m.id}">✕</button>` : ""}${esc(m.body)}<time>${esc(hhmm(m.at).slice(0,5))}</time></div>`;
-/* 只把新留言插到最上面，舊的不重畫，避免整牆閃動 */
-function renderFeed(el, msgs, host){
-  const keep = new Set(msgs.map(m => String(m.id)));
-  [...el.children].forEach(c => keep.has(c.dataset.id) || c.remove());
-  const have = new Set([...el.children].map(c => c.dataset.id));
-  const first = el.children.length === 0;
-  [...msgs].reverse().forEach(m => {
-    if(have.has(String(m.id))) return;
-    el.insertAdjacentHTML("afterbegin", msgHTML(m, host));
-    if(!first) el.firstElementChild.classList.add("new");
+const tabsHTML = `<div class="tabs" id="tabs"><button data-sort="new" class="on">最新</button><button data-sort="top">最多讚</button></div>`;
+function bindTabs(onChange){
+  $("#tabs").onclick = e => {
+    const k = e.target.dataset.sort; if(!k) return;
+    [...$("#tabs").children].forEach(b => b.classList.toggle("on", b === e.target)); onChange(k);
+  };
+}
+const msgHTML = (m, host) => `<div class="msg" data-id="${m.id}">${esc(m.body)}<div class="foot">
+    <time>${esc(hhmm(m.at).slice(0,5))}</time>
+    ${host ? `<span class="like">♥ ${m.likes}</span>
+      <button class="act done" data-answer="${m.id}" title="已回覆：從畫面拿掉，紀錄保留">✓ 已回覆</button>
+      <button class="act x" data-hide="${m.id}" title="不當留言：從畫面拿掉，紀錄保留">✕</button>`
+    : `<button class="like${m.mine ? " on" : ""}" data-like="${m.id}" aria-pressed="${m.mine}">♥ ${m.likes}</button>`}
+  </div></div>`;
+/* 有變才重畫；新出現的留言加動畫。回傳這次新增幾則 */
+function makeFeed(el, host){
+  const seen = new Set(); let sig = "", first = true, sort = "new", last = [];
+  const draw = () => {
+    const list = [...last];
+    if(sort === "top") list.sort((a, b) => b.likes - a.likes || b.id - a.id);
+    const s = sort + JSON.stringify(list.map(m => [m.id, m.likes, m.mine]));
+    if(s === sig) return 0; sig = s;
+    let fresh = 0;
+    el.innerHTML = list.map(m => msgHTML(m, host)).join("");
+    list.forEach(m => { if(!seen.has(m.id)){ seen.add(m.id); if(!first){ fresh++; el.querySelector(`[data-id="${m.id}"]`).classList.add("new"); } } });
+    first = false; return fresh;
+  };
+  return { update: msgs => (last = msgs, draw()), sort: k => (sort = k, draw()), drop: id => (last = last.filter(m => m.id !== id), draw()) };
+}
+
+/* 新留言提示音：只在投影端，兩個短促的高音，約 0.25 秒 */
+let actx;
+function ding(){
+  if(!actx || actx.state !== "running") return;
+  const t = actx.currentTime;
+  [[1046.5, 0], [1568, .09]].forEach(([f, d]) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.12, t + d + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d + .16);
+    o.connect(g).connect(actx.destination); o.start(t + d); o.stop(t + d + .18);
   });
 }
+function unlockSound(){ actx = actx || new (window.AudioContext || window.webkitAudioContext)(); return actx.resume(); }
 
 /* ---------- 投影端：任何人隨時可開一場；只有開場的這個頁面能結束它。
    場次 id 存在這個分頁（sessionStorage），投影頁重新整理不會丟掉整場留言 ---------- */
@@ -127,8 +165,9 @@ function host(){
   const resume = sessionStorage.getItem("wall_host");
   if(resume) return projection(resume);
   app.innerHTML = `<div class="panel center" style="margin:auto;display:grid;gap:18px;max-width:560px">
-    <h1>教育心理學課堂點名</h1><button class="btn" id="open">開始點名</button><div class="err" id="e"></div></div>`;
+    <div class="brand">EDUCATIONAL PSYCHOLOGY</div><h1>教育心理學課堂點名</h1><button class="btn" id="open">開始點名</button><div class="err" id="e"></div></div>`;
   $("#open").onclick = async () => {
+    unlockSound();
     try{ const s = await rpc("rc_open_pub"); sessionStorage.setItem("wall_host", s.id); projection(s.id); }
     catch(e){ $("#e").textContent = "連線失敗，請再按一次。"; }
   };
@@ -154,23 +193,30 @@ function projection(sid){
   };
   $("#close").onclick = async () => {
     if(!confirm("確定結束點名？結束後不能再簽到，已簽到的同學可以繼續留言。")) return;
-    clearTimeout(timer); await rpc("rc_close_pub", {p_session:sid}); tick();
+    unlockSound(); clearTimeout(timer); await rpc("rc_close_pub", {p_session:sid}); tick();
   };
   tick();
 }
 function wallHost(sid){
   app.innerHTML = `<div class="wallhead">
-      <div class="grow"><div class="brand">匿名留言牆</div>
-        <div class="hint">已簽到的同學繼續在手機上留言；手機跳掉的，掃右邊 QR 碼輸入學號回來</div>
-        <div class="muted hint" id="meta"></div></div>
+      <div class="grow"><div class="brand">教育心理學・匿名留言牆</div>
+        <h1>有問題，隨時丟上來</h1>
+        <div class="hint">手機跳掉的同學，掃右邊 QR 碼輸入學號回來</div>
+        <div class="bar" style="justify-content:flex-start"><span class="muted" id="meta"></span>${tabsHTML}<button class="sound" id="snd" hidden>🔔 點這裡開啟新留言提示音</button></div></div>
       <button class="btn ghost sm" id="end">結束留言</button>
       <div class="wallqr" id="wq"></div></div>
     <div class="feed" id="feed"></div>`;
   let wall = "", timer;
+  const feed = makeFeed($("#feed"), true);
+  bindTabs(feed.sort);
+  /* 重新整理過的投影頁，瀏覽器不讓網頁自己出聲，要先點一下 */
+  const sndBtn = $("#snd");
+  if(!actx || actx.state !== "running"){ sndBtn.hidden = false; sndBtn.onclick = () => unlockSound().then(() => { sndBtn.hidden = true; ding(); }); }
   $("#feed").onclick = async e => {
-    const id = e.target.dataset && e.target.dataset.hide; if(!id) return;
-    e.target.closest(".msg").remove();
-    await rpc("wall_hide", {p_session:sid, p_msg:Number(id)}).catch(() => {});
+    const b = e.target.closest("button"); if(!b) return;
+    const id = Number(b.dataset.answer || b.dataset.hide); if(!id) return;
+    feed.drop(id);
+    await rpc(b.dataset.answer ? "wall_answer" : "wall_hide", {p_session:sid, p_msg:id}).catch(() => {});
   };
   $("#end").onclick = async () => {
     if(!confirm("確定結束留言？之後同學就不能再留言了。")) return;
@@ -182,8 +228,8 @@ function wallHost(sid){
     catch(e){ return void (timer = setTimeout(tick, 3000)); }
     if(!v){ sessionStorage.removeItem("wall_host"); return host(); }
     if(v.wall !== wall){ wall = v.wall; qr($("#wq"), wallUrl(wall), 300); }
-    $("#meta").textContent = `已簽到 ${v.count} / ${v.total}・留言 ${v.msgs.length} 則${v.closed ? "・留言已結束" : ""}`;
-    renderFeed($("#feed"), v.msgs, true);
+    $("#meta").textContent = `已簽到 ${v.count} / ${v.total}・留言 ${v.msgs.length} 則・已回覆 ${v.answered} 則${v.closed ? "・留言已結束" : ""}`;
+    if(feed.update(v.msgs) > 0) ding();
     if(v.closed){
       sessionStorage.removeItem("wall_host");
       $("#end").replaceWith(Object.assign(document.createElement("button"), {className:"btn sm", textContent:"開新的一場", onclick:() => host()}));
@@ -272,19 +318,28 @@ function askWallSid(wall, err=""){
 function wallStudent(wall, sid, top=""){
   app.innerHTML = `<div class="phone">${top}
     <div class="panel compose"><h2>匿名留言</h2>
-      <div class="muted" style="font-size:14px">大螢幕和同學都看不到你是誰。整堂課隨時可以留言、提問。</div>
+      <div class="muted" style="font-size:14px">大螢幕和同學都看不到你是誰。整堂課隨時可以留言、提問，也可以替別人的問題按讚。</div>
       <textarea id="body" maxlength="200" placeholder="想問的、想說的，寫在這裡"></textarea>
       <div class="cnt" id="cnt">0 / 200</div>
       <div class="err" id="e"></div>
       <button class="btn" id="send">送出</button></div>
-    <h2 style="margin-top:8px">大家的留言</h2>
+    <div class="bar" style="margin-top:8px"><h2>大家的留言</h2>${tabsHTML}</div>
     <div class="feed" id="feed"></div></div>`;
   let timer;
+  const feed = makeFeed($("#feed"), false);
+  bindTabs(feed.sort);
+  const kick = () => { clearTimeout(timer); tick(); };
   $("#body").oninput = () => $("#cnt").textContent = `${$("#body").value.length} / 200`;
+  $("#feed").onclick = async e => {
+    const b = e.target.closest("[data-like]"); if(!b) return;
+    b.disabled = true;
+    try{ await rpc("wall_like", {p_wall:wall, p_sid:sid, p_msg:Number(b.dataset.like)}); } catch(e){}
+    kick();
+  };
   $("#send").onclick = async () => {
     const b = $("#body").value.trim(); if(!b) return void ($("#e").textContent = MSG.empty);
     $("#send").disabled = true; $("#e").textContent = "";
-    try{ await rpc("wall_post", {p_wall:wall, p_sid:sid, p_body:b}); $("#body").value = ""; $("#cnt").textContent = "0 / 200"; clearTimeout(timer); tick(); }
+    try{ await rpc("wall_post", {p_wall:wall, p_sid:sid, p_body:b}); $("#body").value = ""; $("#cnt").textContent = "0 / 200"; kick(); }
     catch(e){
       if(e.message === "not_checked_in" || e.message === "no_wall"){ store.del("wall_pass"); return askWallSid(wall, MSG[e.message]); }
       $("#e").textContent = MSG[e.message] || "沒送出去，請再按一次。";
@@ -295,8 +350,8 @@ function wallStudent(wall, sid, top=""){
     let v;
     try{ v = await rpc("wall_list", {p_wall:wall, p_sid:sid}); }
     catch(e){ if(e.message === "not_checked_in" || e.message === "no_wall"){ store.del("wall_pass"); return askWallSid(wall, MSG[e.message]); } return void (timer = setTimeout(tick, 4000)); }
-    renderFeed($("#feed"), v.msgs, false);
-    if(v.closed){ $(".compose").innerHTML = `<h2>${MSG.wall_closed}</h2>`; return; }
+    feed.update(v.msgs);
+    if(v.closed){ $(".compose").innerHTML = `<h2>${MSG.wall_closed}</h2>`; $("#feed").onclick = null; return; }
     timer = setTimeout(tick, 3000);
   };
   tick();
