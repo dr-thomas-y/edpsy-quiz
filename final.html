@@ -306,7 +306,11 @@ function tabLive(){
   const same = (a,b) => a && b && a.d === b.d && a.ord === b.ord;
   const people = () => {
     const d = (S.board.find(x => x.d === t) || (live && live.slot && S.board.find(x => x.d === live.slot.d)));
-    return d ? d.slots.map(s => ({d:d.d, ord:s.ord, name:s.name})) : [];
+    const list = d ? d.slots.map(s => ({d:d.d, ord:s.ord, name:s.name})) : [];
+    // 老師臨時叫其他週的人上台：把台上的人也放進選單
+    if(live && live.who && !list.some(p => p.d === live.slot.d && p.ord === live.slot.ord)) list.unshift({d:live.slot.d, ord:live.slot.ord, name:live.who.name});
+    if(S.target && !list.some(p => p.d === S.target.d && p.ord === S.target.ord)) S.target = null;
+    return list;
   };
   const head = () => {
     const ck = S.me.checked_at;
