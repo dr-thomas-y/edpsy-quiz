@@ -302,13 +302,16 @@ function bindReplies(root, after){
 function tabLive(){
   let live = null, feed = [], card = null, sig = "";
   const t = new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
-  const target = () => S.target || (live && live.slot) || null;
+  const target = () => S.target || (!S.day && live && live.slot) || (people()[0] ? {d:people()[0].d, ord:people()[0].ord} : null);
   const same = (a,b) => a && b && a.d === b.d && a.ord === b.ord;
+  // 預設看「台上的人那天」，沒有就看今天、再沒有就看最近一個有人登記的日子；學生可以切到任何一週翻看報告卡
+  const defDay = () => (live && live.slot && live.slot.d) || (S.board.some(x => x.d === t && x.slots.length) ? t : (S.board.find(x => x.d >= t && x.slots.length) || S.board.find(x => x.slots.length) || {}).d);
+  const day = () => S.day || defDay();
   const people = () => {
-    const d = (S.board.find(x => x.d === t) || (live && live.slot && S.board.find(x => x.d === live.slot.d)));
+    const d = S.board.find(x => x.d === day());
     const list = d ? d.slots.map(s => ({d:d.d, ord:s.ord, name:s.name})) : [];
     // 老師臨時叫其他週的人上台：把台上的人也放進選單
-    if(live && live.who && !list.some(p => p.d === live.slot.d && p.ord === live.slot.ord)) list.unshift({d:live.slot.d, ord:live.slot.ord, name:live.who.name});
+    if(live && live.who && day() === defDay() && !list.some(p => p.d === live.slot.d && p.ord === live.slot.ord)) list.unshift({d:live.slot.d, ord:live.slot.ord, name:live.who.name});
     if(S.target && !list.some(p => p.d === S.target.d && p.ord === S.target.ord)) S.target = null;
     return list;
   };
@@ -323,24 +326,28 @@ function tabLive(){
   const draw = () => {
     const body = $("#body"); if(!body) return;
     const tg = target(), ps = people();
-    if(!tg){ body.innerHTML = head() + `<div class="panel muted" style="text-align:center;padding:30px 18px">今天還沒有報告者。<br>老師開始後，這裡會自動出現。</div>`; return; }
+    const days = S.board.filter(x => x.slots.length);
+    const dayRow = days.length ? `<div class="who-row">${days.map(x => `<button class="dsel ${x.d===day()?"on":""}" data-day="${x.d}"><small>${esc(x.label)}</small>${md(x.d)}</button>`).join("")}</div>` : "";
+    const bindDays = () => document.querySelectorAll(".dsel").forEach(b => b.onclick = () => { S.day = b.dataset.day === defDay() ? null : b.dataset.day; const f = people()[0]; S.target = S.day && f ? {d:f.d, ord:f.ord} : null; poll(true); });
+    if(!tg){ body.innerHTML = head() + dayRow + `<div class="panel muted" style="text-align:center;padding:30px 18px">還沒有人登記報告。<br>有人登記後，這裡可以看大家的報告卡。</div>`; bindDays(); return; }
     const isMe = same(tg, S.me.slot);
     const who = card || {name:"", card:{}};
     const canPost = !isMe && S.me.checked_at && pass();
     body.innerHTML = head() +
-      (ps.length ? `<div class="who-row">${ps.map(p => `<button data-d="${p.d}" data-o="${p.ord}" class="${same(p,tg)?"on":""}"><small>第 ${p.ord} 位${same(p, live && live.slot) ? ' <span class="live-dot">● 台上</span>' : ""}</small>${esc(p.name)}</button>`).join("")}</div>` : "") +
+      dayRow + (ps.length ? `<div class="who-row">${ps.map(p => `<button data-d="${p.d}" data-o="${p.ord}" class="${same(p,tg)?"on":""}"><small>第 ${p.ord} 位${same(p, live && live.slot) ? ' <span class="live-dot">● 台上</span>' : ""}</small>${esc(p.name)}</button>`).join("")}</div>` : "") +
       `<section class="panel" style="display:grid;gap:10px">
         <div class="muted" style="font-weight:700">${md(tg.d)} 第 ${tg.ord} 位・${esc(who.name)}${same(tg, live && live.slot) && live.phase==="talk" ? `　<span class="ok" id="lt">倒數 ${mmss(TALK - live.elapsed)}</span>` : ""}</div>
         ${cardHTML(who.card || {})}</section>` +
       (isMe ? `<div class="banner">這是你的報告。同學的留言會出現在下面，可以直接回覆。</div>` :
-       !canPost ? "" :
+       !canPost ? `<div class="banner none">留言要等上課當天，在教室掃投影幕上的 QR 碼簽到後才能留。現在可以先看大家的報告卡。</div>` :
       `<section class="panel" style="display:grid;gap:10px">
         <div class="chips">${KINDS.map(k=>`<button class="chip k${k} ${S.kind===k?"on":""}" data-k="${k}">${k}</button>`).join("")}</div>
         <div class="field"><textarea id="msg" rows="3" maxlength="200" placeholder="寫給 ${esc(who.name)} 的${S.kind}…（會顯示你的姓名）">${esc(S.draft||"")}</textarea></div>
         <button class="btn" id="send">送出${S.kind}</button><div class="err" id="e"></div></section>`) +
       `<section style="display:grid;gap:8px"><div class="muted" style="font-weight:700">給 ${esc(who.name)} 的留言（${feed.length}）</div>
        <div class="feed" id="lf">${feed.slice().reverse().map(x=>commentHTML(x, isMe)).join("") || `<div class="muted">還沒有留言。</div>`}</div></section>`;
-    document.querySelectorAll(".who-row button").forEach(b => b.onclick = () => {
+    bindDays();
+    document.querySelectorAll(".who-row button:not(.dsel)").forEach(b => b.onclick = () => {
       const p = {d:b.dataset.d, ord:+b.dataset.o}; S.target = same(p, live && live.slot) ? null : p; S.draft = $("#msg") ? $("#msg").value : S.draft; poll(true);
     });
     document.querySelectorAll(".chip").forEach(b => b.onclick = () => { S.draft = $("#msg").value; S.kind = b.dataset.k; draw(); });

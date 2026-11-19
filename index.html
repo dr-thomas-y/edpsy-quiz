@@ -50,6 +50,8 @@ h1,h2{margin:0;text-wrap:balance}
 .qrbox img,.qrbox canvas{width:100%!important;height:auto!important}
 .code{color:var(--brand);font-family:var(--display);font-size:56px;letter-spacing:.12em;line-height:1}
 .joinurl{word-break:break-all;font-size:14px}
+.mq{background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px;width:92px;height:92px}
+.mq img,.mq canvas{width:100%!important;height:auto!important}
 .names{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:120px}
 .names:empty::before{content:"等待同學掃描加入…";color:var(--mute);font-size:18px}
 .chip{background:var(--stage);border:1px solid var(--line);padding:8px 14px;border-radius:12px;font-weight:700;animation:pop .35s ease-out}
@@ -235,7 +237,7 @@ const H = { game:null, view:null, lastState:"", lastQ:-1, seen:new Set(), lastTi
 
 function hostShell(right=""){
   return `<div class="top"><div class="brand">測量與評鑑課堂搶答<small>教育心理學 第十一週・測量與評鑑</small></div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${right}${H.game ? `<button class="btn ghost sm" id="endbtn">結束本場</button>` : ""}</div></div>`;
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${right}${H.game ? `<button class="btn ghost sm" id="endbtn">結束本場</button>` : ""}${H.game && H.view && H.view.state !== "lobby" && H.view.state !== "final" ? `<div class="mq" id="mq" title="遲到的同學掃這裡加入"></div>` : ""}</div></div>`;
 }
 // 結束本場：按兩次確認。學生端會跳到最終名次，老師端顯示頒獎與點名紀錄。
 let endArm = 0;
@@ -254,7 +256,9 @@ async function hostStart(){
   hostLoop();
 }
 // 老師端一打開就是附 QR code 的大廳；12 小時內重新整理會回到同一個房號。
+let qrStarted = false;
 function hostOpen(){
+  if(!qrStarted){ qrStarted = true; qrTick(); }
   const saved = store.get("quiz_host");
   if(saved && saved.ts && Date.now() - saved.ts < 12*3600e3){ H.game = saved; hostLoop(); }
   else hostStart().catch(hostIntro);
@@ -289,7 +293,20 @@ async function step(state, q){
        const v = await rpc("host_view", {p_game:H.game.id, p_token:H.game.token}); H.view=v; hostRender(v); }
   finally{ H.busy = false; }
 }
-function joinURL(){ const u = new URL(location.href); u.search = "?g=" + H.game.code; u.hash = ""; return u.toString(); }
+function joinURL(){ const u = new URL(location.href); u.search = "?g=" + H.game.code + (H.qtok ? "&t=" + H.qtok : ""); u.hash = ""; return u.toString(); }
+// 2026-11-20：QR 每 10 秒換一張，學生掃到當下才驗證（只收最近 2 張），擋住把 QR 傳給不在場的人
+async function qrTick(){
+  if(H.game){
+    try{
+      const t = await rpc("quiz_qr", {p_game:H.game.id, p_token:H.game.token});
+      if(t !== H.qtok || !document.querySelector("#qr canvas, #qr img, #mq canvas, #mq img")){
+        H.qtok = t;
+        for(const [id, w] of [["qr",512],["mq",184]]){ const el = document.getElementById(id); if(el){ el.innerHTML = ""; new QRCode(el, {text:joinURL(), width:w, height:w, correctLevel:QRCode.CorrectLevel.M}); } }
+      }
+    }catch(e){ console.warn(e); }
+  }
+  setTimeout(qrTick, 2000);
+}
 
 function hostRender(v){
   const changed = v.state !== H.lastState || v.q_index !== H.lastQ;
@@ -308,7 +325,7 @@ function renderLobby(v, changed){
         <div class="panel qrpanel" style="display:grid;gap:14px;align-content:center;justify-items:center">
           <div class="qrbox" id="qr"></div>
           <div class="center"><div class="muted" style="font-weight:700">房號</div><div class="code">${esc(H.game.code)}</div></div>
-          <div class="joinurl muted center">${esc(joinURL())}</div>
+          <div class="joinurl muted center">請用手機相機掃描（QR 每 10 秒更新）</div>
         </div>
         <div class="panel" style="display:flex;flex-direction:column;gap:16px">
           <h2 style="font-size:28px">掃描加入，取個暱稱</h2>
@@ -319,7 +336,7 @@ function renderLobby(v, changed){
           </div>
         </div>
       </div>`;
-    new QRCode($("#qr"), {text:joinURL(), width:512, height:512, correctLevel:QRCode.CorrectLevel.M});
+    H.qtok = ""; 
     $("#start").onclick = () => { sfx.go(); step("question", 0); };
     $("#new").onclick = () => { store.del("quiz_host"); location.reload(); };
     H.seen.clear();
@@ -390,6 +407,13 @@ function renderFinal(v, changed){
 
 /* ================= 學生手機端 ================= */
 const P = { me:null, lastState:"", lastQ:-1, sent:null };
+const DEV = store.get("quiz_dev") || (store.set("quiz_dev", crypto.randomUUID()), store.get("quiz_dev"));
+const qpass = code => { const p = store.get("quiz_pass"); return p && p.code === code && Date.now() - p.at < 4*3600e3 ? p.pass : null; };
+function scanPrompt(msg){
+  app.innerHTML = phoneShell(`<div class="panel center" style="display:grid;gap:14px;padding:32px 20px">
+    <div style="font-size:48px">📷</div><h1 style="font-size:24px">${esc(msg || "請用手機相機掃描大螢幕上的 QR 碼加入")}</h1>
+    <p class="muted" style="margin:0">QR 每 10 秒更新，掃到就能加入，之後慢慢填學號和暱稱就好。</p></div>`);
+}
 
 function phoneShell(inner, right=""){
   return `<div class="top"><div class="brand">測量與評鑑課堂搶答</div>${right}</div><div class="phone">${inner}</div>`;
@@ -398,7 +422,7 @@ function joinForm(code){
   app.innerHTML = phoneShell(`
     <div class="panel" style="display:grid;gap:16px">
       <h1 style="font-size:28px">加入搶答</h1>
-      <div class="field"><label for="code">房號</label><input id="code" inputmode="numeric" maxlength="6" value="${esc(code||"")}" autocomplete="off"></div>
+      <div class="field"><label for="code">房號</label><input id="code" inputmode="numeric" maxlength="6" value="${esc(code||"")}" autocomplete="off" readonly></div>
       <div class="field"><label for="sid">學號（點名用，只有老師看得到）</label><input id="sid" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="例如：111414001"></div>
       <div class="field"><label for="nm">暱稱（大螢幕顯示，可匿名，最多 12 字）</label><input id="nm" maxlength="12" autocomplete="off" placeholder="例如：海馬迴守門員"></div>
       <button class="btn" id="join">加入</button>
@@ -410,10 +434,10 @@ function joinForm(code){
     if(!c || !n || !sid){ $("#e").textContent = "請填房號、學號和暱稱。"; return; }
     $("#join").disabled = true;
     try{
-      const r = await rpc("join_game", {p_code:c, p_name:n, p_sid:sid});
+      const r = await rpc("join_game", {p_code:c, p_name:n, p_sid:sid, p_pass:qpass(c)});
       P.me = {...r, name:r.name || n, code:c}; store.set("quiz_player", P.me); sfx.join(); phoneLoop();
     }catch(e){
-      $("#e").textContent = /name_taken/.test(e.message) ? "這個暱稱有人用了，換一個吧。" : /no_game/.test(e.message) ? "找不到這個房號，請看大螢幕確認。" : "加入失敗：" + e.message;
+      $("#e").textContent = /name_taken/.test(e.message) ? "這個暱稱有人用了，換一個吧。" : /no_game/.test(e.message) ? "找不到這個房號，請看大螢幕確認。" : /need_scan/.test(e.message) ? "請重新掃描大螢幕上的 QR 碼。" : /pass_other/.test(e.message) ? "這支手機已經幫另一個學號加入了，請用自己的手機掃碼。" : "加入失敗：" + e.message;
       $("#join").disabled = false;
     }
   };
@@ -499,9 +523,17 @@ const qs = new URLSearchParams(location.search);
 if(qs.has("records")) recordsPage();
 else if(qs.has("host")) hostOpen();
 else{
-  const saved = store.get("quiz_player"), code = qs.get("g");
-  if(saved && (!code || saved.code === code)){ P.me = saved; phoneLoop(); }
-  else joinForm(code);
+  const saved = store.get("quiz_player"), code = qs.get("g"), tok = qs.get("t");
+  (async () => {
+    if(code && tok){
+      history.replaceState(null, "", location.pathname + "?g=" + code);
+      try{ const r = await rpc("quiz_enter", {p_code:code, p_tok:tok, p_device:DEV}); store.set("quiz_pass", {pass:r.pass, code:r.code, at:Date.now()}); }
+      catch(e){ if(!(saved && saved.code === code)) return scanPrompt(/expired/.test(e.message) ? "QR 碼過期了，請再掃一次大螢幕上最新的 QR 碼" : /no_game/.test(e.message) ? "找不到這場搶答，請看大螢幕確認" : "連線失敗，請再掃一次"); }
+    }
+    if(saved && (!code || saved.code === code)){ P.me = saved; phoneLoop(); }
+    else if(code && qpass(code)) joinForm(code);
+    else scanPrompt();
+  })();
 }
 </script>
 </body>
