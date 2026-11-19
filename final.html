@@ -59,6 +59,16 @@ h1,h2,h3{margin:0}
 .slot.taken{border-style:solid;background:#f0f2fa;cursor:default}
 .slot.mine{border:2px solid var(--gold);background:#fff6dc}
 .slot .dot{color:var(--ok)}
+.slot.mine{cursor:pointer}
+.arm{border-color:var(--bad)!important;background:#fdeeee!important}.arm span,.arm{color:var(--bad)!important}
+.who-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.who-row button{flex:none;background:#fff;border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-weight:700;color:var(--ink);text-align:left}
+.who-row button small{display:block;font-size:11px;color:var(--mute)}
+.who-row button.on{border-color:var(--brand);background:#eef0ff}
+.live-dot{color:var(--bad);font-size:11px;font-weight:900}
+.checkin{display:flex;align-items:center;gap:12px;font-weight:900}
+.checkin .ic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--ok);font-size:22px;flex:none}
+.checkin.no .ic{background:var(--gold)}
 .past{opacity:.55}
 .count{font-size:12px;color:var(--mute);text-align:right}
 .chips{display:flex;gap:8px}
@@ -124,7 +134,7 @@ body.host .wrap{max-width:none;padding-block:1.6vh;height:100vh;min-height:0}
 <script>
 const SB_URL = "https://uqrivwblsrhqtlvobdmn.supabase.co";
 const SB_KEY = "sb_publishable_mQWkr11yVYAce8jpkeeZlg_kA6-8BKe";
-const TALK = 180, FEED = 180;           // 報告 3 分、回饋 3 分
+const TALK = 360;                       // 每人 6 分鐘（報告＋回饋）
 const KINDS = ["評論","回饋","提問"];
 const $ = s => document.querySelector(s);
 const app = $("#app");
@@ -138,7 +148,7 @@ const hhmm = t => new Date(t).toLocaleTimeString("zh-TW",{hour:"2-digit",minute:
 const mmss = s => { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; };
 const MSG = {not_on_roster:"查無此學號，請確認是否輸入正確。", taken:"這個位置剛剛被別人選走了，請改選其他位置。", past:"這一天已經過了，不能再登記。",
   already_presented:"你已經報告過了，不能再換時段。", self:"不能在自己的報告底下留言。", too_fast:"留言太快了，請等幾秒再送。",
-  empty:"請先輸入內容。", expired:"QR 碼已過期，請重新掃描投影幕上的 QR 碼。", need_scan:"請先掃描投影幕上的 QR 碼，才能留言。", pass_other:"這支手機今天已經用另一個學號留言過了。", no_presenter:"目前台上沒有人。", not_yours:"只能回覆自己收到的留言。"};
+  empty:"請先輸入內容。", expired:"QR 碼已過期，請再掃一次投影幕上最新的 QR 碼。", need_scan:"請先掃描投影幕上的 QR 碼簽到。", pass_other:"這支手機今天已經幫另一個學號簽到過了，請用自己的手機掃碼。", no_presenter:"目前台上沒有人。", not_yours:"只能回覆自己收到的留言。"};
 const say = e => MSG[e.message] || "連線不穩，請再試一次。";
 async function rpc(fn, args){
   const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:"POST", headers:{apikey:SB_KEY,"Content-Type":"application/json"}, body:JSON.stringify(args||{})});
@@ -161,6 +171,16 @@ const commentHTML = (x, replyable) => `<div class="c k${esc(x.kind)}" data-id="$
   ${replyable ? `<div style="display:flex;gap:6px;margin-top:8px"><input class="rin" maxlength="200" placeholder="${x.reply ? "修改回覆" : "回覆這則留言"}" style="flex:1;border:2px solid var(--line);border-radius:10px;padding:8px;font:inherit"><button class="btn sm rbtn">送出</button></div>` : ""}
 </div>`;
 
+/* 按兩下確認（不用瀏覽器的 confirm，LINE／IG 內建瀏覽器會擋） */
+function twoTap(el, label, action){
+  el.onclick = async () => {
+    if(el.dataset.arm && Date.now() - +el.dataset.arm < 4000){ el.dataset.arm = ""; el.disabled = true; await action(); return; }
+    el.dataset.arm = Date.now(); el.classList.add("arm");
+    const t = el.querySelector("span") || el; el.dataset.old = el.dataset.old || t.innerHTML; t.textContent = label;
+    setTimeout(() => { if(el.isConnected && el.dataset.arm){ el.dataset.arm = ""; el.classList.remove("arm"); t.innerHTML = el.dataset.old; } }, 4000);
+  };
+}
+const armed = () => !!document.querySelector(".arm");
 /* ================= 學生端 ================= */
 const S = {sid:null, me:null, board:null, tab:null, kind:"評論", timers:[]};
 function stopTimers(){ S.timers.forEach(clearInterval); S.timers = []; }
@@ -184,6 +204,7 @@ async function student(){
   S.sid = store.get("fp_sid"); if(!S.sid) return login();
   try{ [S.me, S.board] = await Promise.all([rpc("fp_my",{p_sid:S.sid}), rpc("fp_board")]); }
   catch(e){ if(e.message==="not_on_roster"){ store.del("fp_sid"); return login(); } app.innerHTML = `<div class="panel err">連線失敗，請重新整理。</div>`; return; }
+  if(pass() && !S.me.checked_at){ try{ S.me = await rpc("fp_bind",{p_pass:pass(),p_sid:S.sid}); }catch(e){ S.scanErr = say(e); if(e.message!=="pass_other") store.del("fp_pass"); } }
   if(!S.tab){
     const today = new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
     S.tab = !S.me.slot ? "slot" : S.board.some(d=>d.d===today) ? "live" : "card";
@@ -197,42 +218,40 @@ function shell(){
   <div id="body" style="display:flex;flex-direction:column;gap:14px"></div>`;
   $("#out").onclick = () => { store.del("fp_sid"); S.tab = null; login(); };
   document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.t; shell(); });
+  if(S.scanErr){ $("#body").insertAdjacentHTML("beforebegin", `<div class="banner" style="background:#fdeeee;border-color:#f5c2c2;color:var(--bad)">${esc(S.scanErr)}</div>`); S.scanErr = ""; }
   ({slot:tabSlot, card:tabCard, live:tabLive})[S.tab]();
 }
 const myBanner = () => S.me.slot
-  ? `<div class="banner"><span>你登記在 ${md(S.me.slot.d)} 第 ${S.me.slot.ord} 位</span>${S.me.slot.locked ? "" : `<button class="btn ghost sm" id="rel">取消登記</button>`}</div>`
+  ? `<div class="banner"><span>你登記在 ${md(S.me.slot.d)} 第 ${S.me.slot.ord} 位</span>${S.me.slot.locked ? "" : `<button class="btn ghost sm" id="rel"><span>放棄這個時段</span></button>`}</div>`
   : `<div class="banner none">你還沒登記時段。點一個空位就登記好了，之後再慢慢填報告卡。</div>`;
+async function release(){ S.me = await rpc("fp_release",{p_sid:S.sid}); S.board = await rpc("fp_board"); }
 
-/* 登記時段：點空位立刻寫入資料庫，先到先得 */
+/* 登記時段：點空位兩下立刻寫入資料庫，先到先得；點自己的位置兩下放棄 */
 function tabSlot(){
-  const draw = () => {
-    $("#body").innerHTML = myBanner() + S.board.map(day => {
+  const draw = (note="") => {
+    $("#body").innerHTML = myBanner() + (note ? `<div class="banner" style="background:#fdeeee;border-color:#f5c2c2;color:var(--bad)">${esc(note)}</div>` : "") + S.board.map(day => {
       const taken = Object.fromEntries(day.slots.map(s => [s.ord, s]));
       const mine = S.me.slot && S.me.slot.d === day.d ? S.me.slot.ord : 0;
       const cells = Array.from({length:day.cap}, (_,i) => {
         const o = i+1, s = taken[o];
-        if(o === mine) return `<div class="slot mine"><b>第 ${o} 位</b><span>${esc(S.me.name)}（你）</span></div>`;
+        if(o === mine) return S.me.slot.locked ? `<div class="slot mine"><b>第 ${o} 位</b><span>${esc(S.me.name)}（你）</span></div>`
+          : `<button class="slot mine" id="mineBtn"><b>第 ${o} 位・你</b><span>點兩下放棄</span></button>`;
         if(s) return `<div class="slot taken"><b>第 ${o} 位</b><span>${esc(s.name)} ${s.ready?'<span class="dot">●</span>':""}</span></div>`;
         return day.open ? `<button class="slot free" data-d="${day.d}" data-o="${o}"><b>第 ${o} 位</b><span>＋ 選這個</span></button>`
                         : `<div class="slot"><b>第 ${o} 位</b><span class="muted">—</span></div>`;
       }).join("");
       return `<section class="panel day ${day.open?"":"past"}"><h3>${md(day.d)} ${esc(day.label)} <small>已登記 ${day.slots.length} / ${day.cap}</small></h3><div class="slots">${cells}</div></section>`;
-    }).join("") + `<p class="muted" style="font-size:13px;margin:0">● 表示已填好報告卡。每人報告 3 分鐘、回饋 3 分鐘。換時段：直接點新的空位，舊的會自動釋出。</p>`;
-    document.querySelectorAll(".slot.free").forEach(b => b.onclick = async () => {
-      const d = b.dataset.d, o = +b.dataset.o;
-      const note = S.me.slot ? `\n（你原本的 ${md(S.me.slot.d)} 第 ${S.me.slot.ord} 位會釋出）` : "";
-      if(!confirm(`登記 ${md(d)} 第 ${o} 位？${note}`)) return;
-      try{ S.me = await rpc("fp_claim",{p_sid:S.sid,p_d:d,p_ord:o}); }
-      catch(e){ alert(say(e)); }
-      S.board = await rpc("fp_board"); draw();
-    });
-    const rel = $("#rel"); if(rel) rel.onclick = async () => {
-      if(!confirm("確定取消登記？這個位置會讓給別人。")) return;
-      S.me = await rpc("fp_release",{p_sid:S.sid}); S.board = await rpc("fp_board"); draw();
-    };
+    }).join("") + `<p class="muted" style="font-size:13px;margin:0">● 表示已填好報告卡。每人 6 分鐘（報告＋回饋）。要換時段：直接點新的空位，舊的會自動釋出；想跟同學交換，先由一人放棄，另一人再選。</p>`;
+    document.querySelectorAll(".slot.free").forEach(b => twoTap(b, S.me.slot ? "再按一次換到這裡" : "再按一次確認", async () => {
+      let msg = "";
+      try{ S.me = await rpc("fp_claim",{p_sid:S.sid,p_d:b.dataset.d,p_ord:+b.dataset.o}); }catch(e){ msg = say(e); }
+      S.board = await rpc("fp_board"); draw(msg);
+    }));
+    const mb = $("#mineBtn"); if(mb) twoTap(mb, "再按一次放棄", async () => { await release(); draw(); });
+    const rel = $("#rel"); if(rel) twoTap(rel, "再按一次確認放棄", async () => { await release(); draw(); });
   };
   draw();
-  S.timers.push(setInterval(async () => { try{ S.board = await rpc("fp_board"); if(!document.querySelector(":focus")) draw(); }catch{} }, 8000));
+  S.timers.push(setInterval(async () => { try{ S.board = await rpc("fp_board"); if(!armed()) draw(); }catch{} }, 8000));
 }
 
 /* 我的報告卡：主題、重要概念回顧、待答問題 */
@@ -266,7 +285,7 @@ function tabCard(){
     catch(e){ $("#st").textContent = say(e); $("#st").className = "err"; }
     $("#save").disabled = false;
   };
-  const rb = $("#rel"); if(rb) rb.onclick = async () => { if(!confirm("確定取消登記？")) return; S.me = await rpc("fp_release",{p_sid:S.sid}); tabCard(); };
+  const rb = $("#rel"); if(rb) twoTap(rb, "再按一次確認放棄", async () => { await release(); tabCard(); });
   bindReplies($("#myfeed"), () => tabCard());
 }
 function bindReplies(root, after){
@@ -275,46 +294,73 @@ function bindReplies(root, after){
     const box = b.closest(".c"), t = box.querySelector(".rin").value.trim(); if(!t) return;
     b.disabled = true;
     try{ S.me = await rpc("fp_reply",{p_sid:S.sid,p_id:+box.dataset.id,p_reply:t}); after(); }
-    catch(e){ alert(say(e)); b.disabled = false; }
+    catch(e){ b.textContent = say(e); b.disabled = false; }
   });
 }
 
-/* 聽報告留言：跟著投影端台上的人 */
+/* 聽報告留言：掃碼簽到；可以留言給今天任何一位報告者，預設跟著台上的人 */
 function tabLive(){
-  let live = null, sig = "";
-  const progress = () => `<div class="panel progress" style="padding:12px 16px;justify-content:space-between"><span>今天已留言給 <b style="font-size:20px">${S.me.today}</b> 位報告者</span><span style="display:flex;gap:6px;align-items:center">${[0,1].map(i=>`<span class="pip ${S.me.today>i?"on":""}"></span>`).join("")}<span class="${S.me.today>=2?"ok":"muted"}" style="font-size:13px">${S.me.today>=2?"已達出席":"需 2 位"}</span></span></div>`;
+  let live = null, feed = [], card = null, sig = "";
+  const t = new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
+  const target = () => S.target || (live && live.slot) || null;
+  const same = (a,b) => a && b && a.d === b.d && a.ord === b.ord;
+  const people = () => {
+    const d = (S.board.find(x => x.d === t) || (live && live.slot && S.board.find(x => x.d === live.slot.d)));
+    return d ? d.slots.map(s => ({d:d.d, ord:s.ord, name:s.name})) : [];
+  };
+  const head = () => {
+    const ck = S.me.checked_at;
+    return `<section class="panel" style="display:grid;gap:10px;padding:14px 16px">
+      ${ck ? `<div class="checkin"><span class="ic">✓</span><span>今天已簽到 <span class="muted" style="font-weight:700">${hhmm(ck)}</span></span></div>`
+           : `<div class="checkin no"><span class="ic">📷</span><span>請用手機相機掃描投影幕上的 QR 碼簽到<br><span class="muted" style="font-size:13px;font-weight:400">QR 每 10 秒更新，掃到就完成簽到，之後整堂課都能留言。</span></span></div>`}
+      <div class="progress" style="justify-content:space-between;font-size:15px"><span>今天已留言給 <b>${S.me.today}</b> 位報告者</span>
+        <span style="display:flex;gap:6px;align-items:center">${[0,1].map(i=>`<span class="pip ${S.me.today>i?"on":""}"></span>`).join("")}<span class="${S.me.today>=2?"ok":"muted"}" style="font-size:13px">${S.me.today>=2?"已完成":"需 2 位"}</span></span></div></section>`;
+  };
   const draw = () => {
     const body = $("#body"); if(!body) return;
-    if(!live || !live.who){ body.innerHTML = progress() + `<div class="panel muted" style="text-align:center;padding:36px 18px">台上還沒有人。<br>老師點到報告者後，這裡會自動出現。</div>`; return; }
-    const meOnStage = S.me.slot && live.slot.d === S.me.slot.d && live.slot.ord === S.me.slot.ord;
-    const left = live.phase === "talk" ? TALK - live.elapsed : live.phase === "feedback" ? FEED - live.elapsed : null;
-    body.innerHTML = progress() + `<section class="panel" style="display:grid;gap:10px">
-      <div class="muted" style="font-weight:700">${md(live.who.d)} 第 ${live.who.ord} 位・${esc(live.who.name)}${left!==null?`　<span class="ok">${live.phase==="talk"?"報告中":"回饋時間"} ${mmss(left)}</span>`:""}</div>
-      ${cardHTML(live.who.card)}</section>` +
-      (meOnStage ? `<div class="banner">你正在台上。同學的留言會出現在下面，可以直接回覆提問。</div>` :
-      !pass() ? `<div class="panel" style="text-align:center;display:grid;gap:8px;padding:26px 18px"><div style="font-size:40px">📷</div><b>請用手機相機掃描投影幕上的 QR 碼</b><span class="muted" style="font-size:14px">掃過一次，今天這堂課就可以一直留言。留言就是點名。</span></div>` :
+    const tg = target(), ps = people();
+    if(!tg){ body.innerHTML = head() + `<div class="panel muted" style="text-align:center;padding:30px 18px">今天還沒有報告者。<br>老師開始後，這裡會自動出現。</div>`; return; }
+    const isMe = same(tg, S.me.slot);
+    const who = card || {name:"", card:{}};
+    const canPost = !isMe && S.me.checked_at && pass();
+    body.innerHTML = head() +
+      (ps.length ? `<div class="who-row">${ps.map(p => `<button data-d="${p.d}" data-o="${p.ord}" class="${same(p,tg)?"on":""}"><small>第 ${p.ord} 位${same(p, live && live.slot) ? ' <span class="live-dot">● 台上</span>' : ""}</small>${esc(p.name)}</button>`).join("")}</div>` : "") +
+      `<section class="panel" style="display:grid;gap:10px">
+        <div class="muted" style="font-weight:700">${md(tg.d)} 第 ${tg.ord} 位・${esc(who.name)}${same(tg, live && live.slot) && live.phase==="talk" ? `　<span class="ok" id="lt">倒數 ${mmss(TALK - live.elapsed)}</span>` : ""}</div>
+        ${cardHTML(who.card || {})}</section>` +
+      (isMe ? `<div class="banner">這是你的報告。同學的留言會出現在下面，可以直接回覆。</div>` :
+       !canPost ? "" :
       `<section class="panel" style="display:grid;gap:10px">
         <div class="chips">${KINDS.map(k=>`<button class="chip k${k} ${S.kind===k?"on":""}" data-k="${k}">${k}</button>`).join("")}</div>
-        <div class="field"><textarea id="msg" rows="3" maxlength="200" placeholder="寫給 ${esc(live.who.name)} 的${S.kind}…（會顯示你的姓名）">${esc(S.draft||"")}</textarea></div>
+        <div class="field"><textarea id="msg" rows="3" maxlength="200" placeholder="寫給 ${esc(who.name)} 的${S.kind}…（會顯示你的姓名）">${esc(S.draft||"")}</textarea></div>
         <button class="btn" id="send">送出${S.kind}</button><div class="err" id="e"></div></section>`) +
-      `<section style="display:grid;gap:8px"><div class="muted" style="font-weight:700">大家的留言（${live.feed.length}）</div>
-       <div class="feed" id="lf">${live.feed.slice().reverse().map(x=>commentHTML(x, meOnStage)).join("") || `<div class="muted">還沒有留言。</div>`}</div></section>`;
+      `<section style="display:grid;gap:8px"><div class="muted" style="font-weight:700">給 ${esc(who.name)} 的留言（${feed.length}）</div>
+       <div class="feed" id="lf">${feed.slice().reverse().map(x=>commentHTML(x, isMe)).join("") || `<div class="muted">還沒有留言。</div>`}</div></section>`;
+    document.querySelectorAll(".who-row button").forEach(b => b.onclick = () => {
+      const p = {d:b.dataset.d, ord:+b.dataset.o}; S.target = same(p, live && live.slot) ? null : p; S.draft = $("#msg") ? $("#msg").value : S.draft; poll(true);
+    });
     document.querySelectorAll(".chip").forEach(b => b.onclick = () => { S.draft = $("#msg").value; S.kind = b.dataset.k; draw(); });
     const m = $("#msg"); if(m) m.oninput = () => S.draft = m.value;
     const s = $("#send"); if(s) s.onclick = async () => {
-      const t = $("#msg").value.trim(); if(!t) return;
+      const txt = $("#msg").value.trim(); if(!txt) return;
       s.disabled = true;
-      try{ S.me = await rpc("fp_comment",{p_sid:S.sid,p_pass:pass(),p_d:live.slot.d,p_ord:live.slot.ord,p_kind:S.kind,p_body:t}); S.draft = ""; await poll(true); }
-      catch(e){ if(e.message==="need_scan") store.del("fp_pass"); $("#e").textContent = say(e); s.disabled = false; if(e.message==="need_scan") draw(); }
+      try{ S.me = await rpc("fp_comment",{p_sid:S.sid,p_pass:pass(),p_d:tg.d,p_ord:tg.ord,p_kind:S.kind,p_body:txt}); S.draft = ""; await poll(true); }
+      catch(e){ if(e.message==="need_scan") store.del("fp_pass"); $("#e").textContent = say(e); s.disabled = false; }
     };
     bindReplies($("#lf"), () => poll(true));
   };
   const poll = async (force) => {
-    try{ live = await rpc("fp_live_get"); }catch{ return; }
+    try{
+      live = await rpc("fp_live_get");
+      const tg = target();
+      if(tg && !same(tg, live.slot)){ [card, feed] = await Promise.all([rpc("fp_card_at",{p_d:tg.d,p_ord:tg.ord}), rpc("fp_feed",{p_d:tg.d,p_ord:tg.ord})]); }
+      else { card = live.who; feed = live.feed; }
+      if(force && S.board) S.board = await rpc("fp_board");
+    }catch{ return; }
     const typing = document.activeElement && ["TEXTAREA","INPUT"].includes(document.activeElement.tagName);
-    const ns = JSON.stringify([live.slot, live.feed.length, live.feed.map(x=>x.reply), live.who && live.who.card, live.phase]);
+    const ns = JSON.stringify([target(), live.slot, feed.map(x=>[x.id,x.reply]), card && card.card, live.phase, S.me.today, S.me.checked_at]);
     if(force || (ns !== sig && !typing)){ sig = ns; draw(); }
-    else { const k = document.querySelector(".ok"); if(k && live.phase!=="idle"){ const left = (live.phase==="talk"?TALK:FEED) - live.elapsed; k.textContent = `${live.phase==="talk"?"報告中":"回饋時間"} ${mmss(left)}`; } }
+    else { const k = $("#lt"); if(k) k.textContent = `倒數 ${mmss(TALK - live.elapsed)}`; }
   };
   poll(true); S.timers.push(setInterval(poll, 3000));
 }
@@ -326,12 +372,13 @@ async function host(){
   app.innerHTML = `<div class="hostgrid">
     <aside class="panel side" id="side"></aside>
     <main class="panel slide" id="slide"></main>
-    <aside class="panel rside"><div class="timer"><span class="phase" id="ph">待命</span><span class="clock" id="clk">--:--</span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="bt">開始報告 3 分</button><button class="btn sm" id="bf">開始回饋 3 分</button><button class="btn ghost sm" id="bn">下一位 →</button></div>
+    <aside class="panel rside"><div class="timer"><span class="phase" id="ph">待命</span><span class="clock" id="clk">--:--</span><span class="muted" style="margin-left:auto;font-weight:900" id="ckc"></span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="bt">開始倒數 6 分鐘</button><button class="btn ghost sm" id="bs">停止</button><button class="btn ghost sm" id="bn">下一位 →</button></div>
       <div class="muted" style="font-weight:700" id="fc">同學留言</div><div class="feed" id="hf"></div></aside></div>`;
-  $("#bt").onclick = () => setLive("talk"); $("#bf").onclick = () => setLive("feedback"); $("#bn").onclick = next;
+  $("#bt").onclick = () => setLive("talk"); $("#bs").onclick = () => setLive("idle"); $("#bn").onclick = next;
   await loadBoard(); await pollLive();
   setInterval(loadBoard, 15000); setInterval(pollLive, 2000); setInterval(drawQR, 2000); setInterval(tickClock, 250);
+  const ckc = async () => { try{ $("#ckc").textContent = `已簽到 ${await rpc("fp_checked_count")} 人`; }catch{} }; ckc(); setInterval(ckc, 5000);
 }
 const today = () => new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
 async function loadBoard(){
@@ -339,7 +386,7 @@ async function loadBoard(){
   const t = today();
   const days = H.board.slice().sort((a,b) => (b.d===t) - (a.d===t) || a.d.localeCompare(b.d));
   $("#side").innerHTML = `<div class="brand" style="font-size:18px">期末報告<small>點名字切換報告者</small></div>
-    <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px">掃碼留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>` +
+    <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px">掃碼簽到・留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>` +
     days.map(day => `<div><h4>${md(day.d)} ${esc(day.label)}${day.d===t?"・今天":""}</h4>${day.slots.map(s =>
       `<button class="pick ${H.sel && H.sel.d===day.d && H.sel.ord===s.ord ? "on":""}" data-d="${day.d}" data-o="${s.ord}"><i>${s.ord}</i>${esc(s.name)}${s.ready?"":'<span class="nr">未填卡</span>'}</button>`).join("") || '<div class="muted" style="font-size:13px">尚無人登記</div>'}</div>`).join("");
   H.qtok = ""; drawQR();
@@ -355,7 +402,7 @@ async function drawQR(force){
   let ov = $(".bigqr");
   if(H.big){
     if(!ov){ ov = document.createElement("div"); ov.className = "bigqr"; document.body.append(ov); ov.onclick = () => { H.big = false; ov.remove(); }; }
-    ov.innerHTML = `<div><b style="font-size:3vh">手機掃描留言（每 10 秒更新）</b><div id="bq"></div><span class="muted">點任何地方關閉</span></div>`;
+    ov.innerHTML = `<div><b style="font-size:3vh">手機掃描簽到・留言（每 10 秒更新）</b><div id="bq"></div><span class="muted">點任何地方關閉</span></div>`;
     new QRCode($("#bq"), {text:url, width:640, height:640, correctLevel:QRCode.CorrectLevel.M});
   }
 }
@@ -394,8 +441,8 @@ function renderLive(force){
 }
 function tickClock(){
   const L = H.live; if(!L) return;
-  const ph = L.phase, lim = ph==="talk" ? TALK : ph==="feedback" ? FEED : 0;
-  $("#ph").textContent = ph==="talk" ? "報告" : ph==="feedback" ? "回饋" : "待命";
+  const ph = L.phase, lim = ph==="talk" ? TALK : 0;
+  $("#ph").textContent = ph==="talk" ? "倒數" : "待命";
   if(!lim){ $("#clk").textContent = "--:--"; $("#clk").classList.remove("over"); return; }
   const left = lim - (Date.now() - H.t0)/1000;
   $("#clk").textContent = left > 0 ? mmss(left) : "時間到"; $("#clk").classList.toggle("over", left <= 0);
@@ -405,8 +452,9 @@ function tickClock(){
 const qs = new URLSearchParams(location.search);
 async function enter(tok){
   history.replaceState(null, "", location.pathname);
-  try{ const r = await rpc("fp_enter", {p_tok:tok, p_device:DEV}); store.set("fp_pass", r); S.tab = "live"; }
-  catch(e){ alert(say(e)); }
+  try{ const r = await rpc("fp_enter", {p_tok:tok, p_device:DEV, p_sid:store.get("fp_sid")}); store.set("fp_pass", r); S.tab = "live";
+       if(r.bind_error) S.scanErr = say({message:r.bind_error}); }
+  catch(e){ S.scanErr = say(e); S.tab = "live"; }
   student();
 }
 if(qs.has("host")) host(); else if(qs.get("t")) enter(qs.get("t")); else student();
