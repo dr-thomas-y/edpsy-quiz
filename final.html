@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>教育心理學期末報告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* 與課堂點名、搶答同一套亮色舞台 */
+:root{
+  --stage:#eef1fa; --stage-2:#ffffff; --line:#dde2f1; --ink:#1c1f3a; --mute:#646a8c;
+  --brand:#33358f; --brand-d:#23246b; --ok:#14966f; --bad:#e5484d; --gold:#f2b632; --soft:#f5f6fd;
+  --k1:#3e63dd; --k2:#12a594; --k3:#e5484d;
+  --shadow:0 1px 2px #1c1f3a0f,0 10px 30px #33358f14;
+  --display:"Bungee","Noto Sans TC",system-ui,sans-serif;
+  --body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(900px 500px at 85% -10%,#c9d2ff,transparent 70%),radial-gradient(700px 420px at -10% 110%,#ffe2b8,transparent 70%),var(--stage);background-attachment:fixed;color:var(--ink);font-family:var(--body);
+  padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));}
+button{font:inherit;cursor:pointer;border:0}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+h1,h2,h3{margin:0}
+.wrap{max-width:560px;margin:0 auto;padding-block:16px 28px;display:flex;flex-direction:column;gap:16px;min-height:100%}
+.brand{font-weight:900;font-size:20px;letter-spacing:.04em;color:var(--brand)}
+.brand small{display:block;font-size:12px;color:var(--mute);font-weight:700;letter-spacing:.08em}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.btn{background:var(--brand);color:#fff;font-weight:900;padding:13px 22px;border-radius:14px;font-size:17px;box-shadow:0 5px 0 var(--brand-d);transition:transform .08s;text-align:center}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--brand-d)}
+.btn.ghost{background:var(--stage-2);color:var(--brand);border:2px solid var(--line);box-shadow:none}
+.btn.sm{padding:6px 12px;font-size:14px;border-radius:10px;box-shadow:none}
+.btn[disabled]{opacity:.45;cursor:default}
+.panel{background:var(--stage-2);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+.muted{color:var(--mute)}
+.err{color:var(--bad);font-weight:700;min-height:1.2em}
+.ok{color:var(--ok);font-weight:700}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:14px;color:var(--mute);display:flex;justify-content:space-between}
+.field input,.field textarea{background:var(--soft);border:2px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:17px;font-family:var(--body);width:100%;resize:vertical}
+.field input.big{font-size:22px;letter-spacing:.08em}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--stage-2);border:1px solid var(--line);border-radius:14px;padding:5px;position:sticky;top:8px;z-index:5;box-shadow:var(--shadow)}
+.tabs button{background:none;padding:10px 4px;border-radius:10px;font-weight:900;color:var(--mute);font-size:15px}
+.tabs button.on{background:var(--brand);color:#fff}
+.banner{background:#fff8e6;border:1px solid #f6dfa3;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
+.banner.none{background:var(--soft);border-color:var(--line);color:var(--mute)}
+.day h3{font-size:18px;display:flex;justify-content:space-between;align-items:baseline}
+.day h3 small{font-size:13px;color:var(--mute);font-weight:700}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin-top:12px}
+.slot{border:2px dashed var(--line);background:var(--soft);border-radius:12px;padding:9px 10px;text-align:left;min-height:58px;display:flex;flex-direction:column;gap:2px}
+.slot b{font-size:12px;color:var(--mute)}
+.slot span{font-weight:900;font-size:15px}
+.slot.free{border-color:#c9cff0;background:#fff}
+.slot.free span{color:var(--brand)}
+.slot.free:hover{border-color:var(--brand)}
+.slot.taken{border-style:solid;background:#f0f2fa;cursor:default}
+.slot.mine{border:2px solid var(--gold);background:#fff6dc}
+.slot .dot{color:var(--ok)}
+.past{opacity:.55}
+.count{font-size:12px;color:var(--mute);text-align:right}
+.chips{display:flex;gap:8px}
+.chip{flex:1;padding:10px;border-radius:12px;border:2px solid var(--line);background:#fff;font-weight:900;color:var(--mute)}
+.chip.on.k評論{border-color:var(--k1);color:var(--k1);background:#eef2ff}
+.chip.on.k回饋{border-color:var(--k2);color:var(--k2);background:#e8f8f5}
+.chip.on.k提問{border-color:var(--k3);color:var(--k3);background:#fdeeee}
+.feed{display:flex;flex-direction:column;gap:10px}
+.c{background:#fff;border:1px solid var(--line);border-left:5px solid var(--k1);border-radius:12px;padding:10px 12px}
+.c.k回饋{border-left-color:var(--k2)} .c.k提問{border-left-color:var(--k3)}
+.c .h{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mute);font-weight:700}
+.tag{font-size:12px;font-weight:900;padding:1px 8px;border-radius:999px;color:#fff;background:var(--k1)}
+.tag.k回饋{background:var(--k2)} .tag.k提問{background:var(--k3)}
+.c p{margin:4px 0 0;white-space:pre-wrap;line-height:1.55}
+.reply{margin-top:8px;background:var(--soft);border-radius:10px;padding:8px 10px;font-size:15px}
+.reply b{color:var(--brand)}
+.mini{border:1px solid var(--line);border-radius:16px;padding:16px;background:linear-gradient(160deg,#fff,#f6f7ff)}
+.mini .t{font-weight:900;font-size:20px;color:var(--brand)}
+.mini ol{margin:8px 0;padding-left:22px;line-height:1.6}
+.mini .q{background:#fff3d6;border-radius:10px;padding:8px 10px;font-weight:700}
+.linkbtn{background:none;color:var(--mute);text-decoration:underline;font-size:14px;padding:6px}
+.copy{text-align:center;color:var(--mute);font-size:12px;letter-spacing:.08em;margin-top:auto;padding-top:8px}
+.progress{display:flex;gap:6px;align-items:center;font-weight:700}
+.pip{width:14px;height:14px;border-radius:50%;background:var(--line)} .pip.on{background:var(--ok)}
+
+/* ===== 投影端 ===== */
+body.host .wrap{max-width:none;padding-block:1.6vh;height:100vh;min-height:0}
+.hostgrid{display:grid;grid-template-columns:clamp(220px,17vw,300px) minmax(0,1fr) clamp(300px,26vw,460px);gap:1.4vw;flex:1;min-height:0}
+.side{overflow:auto;display:flex;flex-direction:column;gap:12px;padding:14px}
+.side h4{margin:4px 0 2px;font-size:14px;color:var(--mute);letter-spacing:.06em}
+.pick{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:none;padding:7px 8px;border-radius:10px;font-weight:700;font-size:15px}
+.pick:hover{background:var(--soft)}
+.pick.on{background:var(--brand);color:#fff}
+.pick i{font-style:normal;font-size:12px;color:var(--mute);width:22px;text-align:right;flex:none}
+.pick.on i{color:#cfd3ff}
+.pick .nr{color:var(--bad);font-size:11px;margin-left:auto}
+.pick.on .nr{color:#ffd0d0}
+.slide{display:flex;flex-direction:column;gap:2.2vh;padding:4vh 3.4vw;min-height:0;overflow:auto}
+.slide .who{font-size:clamp(16px,1.4vw,24px);font-weight:900;color:var(--mute);letter-spacing:.06em}
+.slide .t{font-size:clamp(30px,3.4vw,62px);font-weight:900;line-height:1.25;color:var(--brand)}
+.slide .lbl{font-size:clamp(14px,1.1vw,18px);font-weight:900;color:var(--mute);letter-spacing:.1em}
+.slide ol{margin:0;padding-left:1.3em;font-size:clamp(20px,1.9vw,34px);line-height:1.55;font-weight:700}
+.slide .q{background:#fff3d6;border-radius:16px;padding:1.4vh 1.4vw;font-size:clamp(20px,1.9vw,34px);font-weight:900}
+.slide .ref{font-size:clamp(13px,1vw,17px);color:var(--mute)}
+.slide .empty{font-size:clamp(20px,2vw,32px);color:var(--mute);font-weight:700;margin:auto}
+.timer{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.clock{font-family:var(--display);font-size:clamp(28px,2.6vw,46px);color:var(--brand);font-variant-numeric:tabular-nums;min-width:3.6em}
+.clock.over{color:var(--bad)}
+.phase{font-weight:900;color:var(--mute)}
+.rside{display:flex;flex-direction:column;gap:10px;padding:14px;min-height:0}
+.rside .feed{overflow:auto;flex:1}
+.rside .c p{font-size:clamp(15px,1.15vw,20px)}
+.qrmini{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;width:100%;max-width:170px;margin:0 auto}
+.qrmini img,.qrmini canvas{width:100%!important;height:auto!important}
+.bigqr{position:fixed;inset:0;background:#1c1f3acc;display:grid;place-items:center;z-index:50}
+.bigqr div{background:#fff;border-radius:24px;padding:3vh;width:min(86vh,80vw);display:grid;gap:1.5vh;text-align:center}
+.bigqr img,.bigqr canvas{width:100%!important;height:auto!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app" style="display:flex;flex-direction:column;gap:16px;flex:1;min-height:0"></div><footer class="copy">© 袁齊笙博士版權所有</footer></div>
+<script>
+const SB_URL = "https://uqrivwblsrhqtlvobdmn.supabase.co";
+const SB_KEY = "sb_publishable_mQWkr11yVYAce8jpkeeZlg_kA6-8BKe";
+const TALK = 180, FEED = 180;           // 報告 3 分、回饋 3 分
+const KINDS = ["評論","回饋","提問"];
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}}, set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)), del:k=>localStorage.removeItem(k)};
+const WD = "日一二三四五六";
+const DEV = store.get("fp_dev") || (store.set("fp_dev", crypto.randomUUID()), store.get("fp_dev"));
+const pass = () => { const p = store.get("fp_pass"); return p && new Date(p.until) > new Date() ? p.pass : null; };
+const md = d => { const x = new Date(d+"T00:00:00+08:00"); return `${x.getMonth()+1}/${x.getDate()}（${WD[x.getDay()]}）`; };
+const hhmm = t => new Date(t).toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit",hour12:false});
+const mmss = s => { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; };
+const MSG = {not_on_roster:"查無此學號，請確認是否輸入正確。", taken:"這個位置剛剛被別人選走了，請改選其他位置。", past:"這一天已經過了，不能再登記。",
+  already_presented:"你已經報告過了，不能再換時段。", self:"不能在自己的報告底下留言。", too_fast:"留言太快了，請等幾秒再送。",
+  empty:"請先輸入內容。", expired:"QR 碼已過期，請重新掃描投影幕上的 QR 碼。", need_scan:"請先掃描投影幕上的 QR 碼，才能留言。", pass_other:"這支手機今天已經用另一個學號留言過了。", no_presenter:"目前台上沒有人。", not_yours:"只能回覆自己收到的留言。"};
+const say = e => MSG[e.message] || "連線不穩，請再試一次。";
+async function rpc(fn, args){
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:"POST", headers:{apikey:SB_KEY,"Content-Type":"application/json"}, body:JSON.stringify(args||{})});
+  const t = await r.text(); const j = t ? JSON.parse(t) : null;
+  if(!r.ok) throw new Error((j && j.message) || r.statusText);
+  return j;
+}
+const cardHTML = (c, cls="mini") => {
+  const cs = [c.c1,c.c2,c.c3].filter(Boolean);
+  return `<div class="${cls}">
+    ${c.topic ? `<div class="t">${esc(c.topic)}</div>` : `<div class="muted">（尚未填主題）</div>`}
+    ${cs.length ? `<ol>${cs.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>` : ""}
+    ${c.question ? `<div class="q">待答問題：${esc(c.question)}</div>` : ""}
+    ${c.ref ? `<div class="muted" style="font-size:13px;margin-top:6px">${esc(c.ref)}</div>` : ""}</div>`;
+};
+const commentHTML = (x, replyable) => `<div class="c k${esc(x.kind)}" data-id="${x.id}">
+  <div class="h"><span class="tag k${esc(x.kind)}">${esc(x.kind)}</span><span>${esc(x.name)}</span><span style="margin-left:auto">${hhmm(x.at)}</span></div>
+  <p>${esc(x.body)}</p>
+  ${x.reply ? `<div class="reply"><b>報告者回覆：</b>${esc(x.reply)}</div>` : ""}
+  ${replyable ? `<div style="display:flex;gap:6px;margin-top:8px"><input class="rin" maxlength="200" placeholder="${x.reply ? "修改回覆" : "回覆這則留言"}" style="flex:1;border:2px solid var(--line);border-radius:10px;padding:8px;font:inherit"><button class="btn sm rbtn">送出</button></div>` : ""}
+</div>`;
+
+/* ================= 學生端 ================= */
+const S = {sid:null, me:null, board:null, tab:null, kind:"評論", timers:[]};
+function stopTimers(){ S.timers.forEach(clearInterval); S.timers = []; }
+function login(){
+  stopTimers();
+  app.innerHTML = `<div class="top"><div class="brand">教育心理學期末報告<small>登記時段・報告卡・即時留言</small></div></div>
+  <div class="panel" style="display:grid;gap:14px">
+    <h2>用學號登入</h2>
+    <div class="field"><label for="sid">學號</label><input id="sid" class="big" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="例如：111414001"></div>
+    <button class="btn" id="go">登入</button><div class="err" id="e"></div>
+  </div>`;
+  const go = async () => {
+    const v = $("#sid").value.trim(); if(!v) return;
+    $("#go").disabled = true;
+    try{ const r = await rpc("fp_login", {p_sid:v}); store.set("fp_sid", r.sid); S.sid = r.sid; student(); }
+    catch(e){ $("#e").textContent = say(e); $("#go").disabled = false; }
+  };
+  $("#go").onclick = go; $("#sid").onkeydown = e => { if(e.key==="Enter") go(); };
+}
+async function student(){
+  S.sid = store.get("fp_sid"); if(!S.sid) return login();
+  try{ [S.me, S.board] = await Promise.all([rpc("fp_my",{p_sid:S.sid}), rpc("fp_board")]); }
+  catch(e){ if(e.message==="not_on_roster"){ store.del("fp_sid"); return login(); } app.innerHTML = `<div class="panel err">連線失敗，請重新整理。</div>`; return; }
+  if(!S.tab){
+    const today = new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
+    S.tab = !S.me.slot ? "slot" : S.board.some(d=>d.d===today) ? "live" : "card";
+  }
+  shell();
+}
+function shell(){
+  stopTimers();
+  app.innerHTML = `<div class="top"><div class="brand">教育心理學期末報告<small>${esc(S.me.name)}</small></div><button class="linkbtn" id="out">登出</button></div>
+  <div class="tabs">${[["slot","登記時段"],["card","我的報告卡"],["live","聽報告留言"]].map(([k,t])=>`<button data-t="${k}" class="${S.tab===k?"on":""}">${t}</button>`).join("")}</div>
+  <div id="body" style="display:flex;flex-direction:column;gap:14px"></div>`;
+  $("#out").onclick = () => { store.del("fp_sid"); S.tab = null; login(); };
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.t; shell(); });
+  ({slot:tabSlot, card:tabCard, live:tabLive})[S.tab]();
+}
+const myBanner = () => S.me.slot
+  ? `<div class="banner"><span>你登記在 ${md(S.me.slot.d)} 第 ${S.me.slot.ord} 位</span>${S.me.slot.locked ? "" : `<button class="btn ghost sm" id="rel">取消登記</button>`}</div>`
+  : `<div class="banner none">你還沒登記時段。點一個空位就登記好了，之後再慢慢填報告卡。</div>`;
+
+/* 登記時段：點空位立刻寫入資料庫，先到先得 */
+function tabSlot(){
+  const draw = () => {
+    $("#body").innerHTML = myBanner() + S.board.map(day => {
+      const taken = Object.fromEntries(day.slots.map(s => [s.ord, s]));
+      const mine = S.me.slot && S.me.slot.d === day.d ? S.me.slot.ord : 0;
+      const cells = Array.from({length:day.cap}, (_,i) => {
+        const o = i+1, s = taken[o];
+        if(o === mine) return `<div class="slot mine"><b>第 ${o} 位</b><span>${esc(S.me.name)}（你）</span></div>`;
+        if(s) return `<div class="slot taken"><b>第 ${o} 位</b><span>${esc(s.name)} ${s.ready?'<span class="dot">●</span>':""}</span></div>`;
+        return day.open ? `<button class="slot free" data-d="${day.d}" data-o="${o}"><b>第 ${o} 位</b><span>＋ 選這個</span></button>`
+                        : `<div class="slot"><b>第 ${o} 位</b><span class="muted">—</span></div>`;
+      }).join("");
+      return `<section class="panel day ${day.open?"":"past"}"><h3>${md(day.d)} ${esc(day.label)} <small>已登記 ${day.slots.length} / ${day.cap}</small></h3><div class="slots">${cells}</div></section>`;
+    }).join("") + `<p class="muted" style="font-size:13px;margin:0">● 表示已填好報告卡。每人報告 3 分鐘、回饋 3 分鐘。換時段：直接點新的空位，舊的會自動釋出。</p>`;
+    document.querySelectorAll(".slot.free").forEach(b => b.onclick = async () => {
+      const d = b.dataset.d, o = +b.dataset.o;
+      const note = S.me.slot ? `\n（你原本的 ${md(S.me.slot.d)} 第 ${S.me.slot.ord} 位會釋出）` : "";
+      if(!confirm(`登記 ${md(d)} 第 ${o} 位？${note}`)) return;
+      try{ S.me = await rpc("fp_claim",{p_sid:S.sid,p_d:d,p_ord:o}); }
+      catch(e){ alert(say(e)); }
+      S.board = await rpc("fp_board"); draw();
+    });
+    const rel = $("#rel"); if(rel) rel.onclick = async () => {
+      if(!confirm("確定取消登記？這個位置會讓給別人。")) return;
+      S.me = await rpc("fp_release",{p_sid:S.sid}); S.board = await rpc("fp_board"); draw();
+    };
+  };
+  draw();
+  S.timers.push(setInterval(async () => { try{ S.board = await rpc("fp_board"); if(!document.querySelector(":focus")) draw(); }catch{} }, 8000));
+}
+
+/* 我的報告卡：主題、重要概念回顧、待答問題 */
+function tabCard(){
+  const c = S.me.card;
+  const f = (id, label, max, ph, val, area) => `<div class="field"><label for="${id}"><span>${label}</span><span class="count" id="${id}n"></span></label>
+    ${area ? `<textarea id="${id}" maxlength="${max}" rows="2" placeholder="${ph}">${esc(val)}</textarea>` : `<input id="${id}" maxlength="${max}" placeholder="${ph}" value="${esc(val)}">`}</div>`;
+  $("#body").innerHTML = myBanner() + `<section class="panel" style="display:grid;gap:14px">
+    <h2 style="font-size:19px">我的報告卡</h2>
+    <p class="muted" style="margin:0;font-size:14px">投影時會像一張投影片，每格寫一兩行就好。報告前隨時可以回來改。</p>
+    ${f("topic","主題",60,"例如：鷹架策略如何提升國小數學學習動機",c.topic)}
+    ${f("c1","重要概念回顧 1",80,"一句話說明一個概念",c.c1,true)}
+    ${f("c2","重要概念回顧 2（選填）",80,"",c.c2,true)}
+    ${f("c3","重要概念回顧 3（選填）",80,"",c.c3,true)}
+    ${f("question","待答問題",80,"你想回答或想請大家一起想的問題",c.question,true)}
+    ${f("ref","主要參考文獻（選填）",200,"作者（年代）。篇名。",c.ref,true)}
+    <button class="btn" id="save">儲存</button>
+    <div id="st" class="muted" style="font-size:14px">${c.updated_at ? `上次儲存：${new Date(c.updated_at).toLocaleString("zh-TW",{hour12:false})}` : "還沒儲存過"}</div>
+  </section>
+  <section class="panel" style="display:grid;gap:10px"><h2 style="font-size:17px">預覽</h2><div id="pv">${cardHTML(c)}</div></section>
+  ${S.me.feed.length ? `<section class="panel" style="display:grid;gap:10px"><h2 style="font-size:17px">同學給你的留言（${S.me.feed.length}）</h2><div class="feed" id="myfeed">${S.me.feed.map(x=>commentHTML(x,true)).join("")}</div></section>` : ""}`;
+  const ids = ["topic","c1","c2","c3","question","ref"];
+  const val = () => Object.fromEntries(ids.map(k => [k, $("#"+k).value]));
+  const upd = () => { ids.forEach(k => { const el=$("#"+k); $("#"+k+"n").textContent = `${el.value.length}/${el.maxLength}`; }); $("#pv").innerHTML = cardHTML(val()); };
+  ids.forEach(k => $("#"+k).oninput = () => { upd(); $("#st").textContent = "有修改尚未儲存"; $("#st").className = "err"; });
+  upd();
+  $("#save").onclick = async () => {
+    const v = val(); $("#save").disabled = true;
+    try{ S.me = await rpc("fp_save",{p_sid:S.sid,p_topic:v.topic,p_c1:v.c1,p_c2:v.c2,p_c3:v.c3,p_question:v.question,p_ref:v.ref});
+         $("#st").textContent = `已儲存 ${hhmm(S.me.card.updated_at)}`; $("#st").className = "ok"; }
+    catch(e){ $("#st").textContent = say(e); $("#st").className = "err"; }
+    $("#save").disabled = false;
+  };
+  const rb = $("#rel"); if(rb) rb.onclick = async () => { if(!confirm("確定取消登記？")) return; S.me = await rpc("fp_release",{p_sid:S.sid}); tabCard(); };
+  bindReplies($("#myfeed"), () => tabCard());
+}
+function bindReplies(root, after){
+  if(!root) return;
+  root.querySelectorAll(".rbtn").forEach(b => b.onclick = async () => {
+    const box = b.closest(".c"), t = box.querySelector(".rin").value.trim(); if(!t) return;
+    b.disabled = true;
+    try{ S.me = await rpc("fp_reply",{p_sid:S.sid,p_id:+box.dataset.id,p_reply:t}); after(); }
+    catch(e){ alert(say(e)); b.disabled = false; }
+  });
+}
+
+/* 聽報告留言：跟著投影端台上的人 */
+function tabLive(){
+  let live = null, sig = "";
+  const progress = () => `<div class="panel progress" style="padding:12px 16px;justify-content:space-between"><span>今天已留言給 <b style="font-size:20px">${S.me.today}</b> 位報告者</span><span style="display:flex;gap:6px;align-items:center">${[0,1].map(i=>`<span class="pip ${S.me.today>i?"on":""}"></span>`).join("")}<span class="${S.me.today>=2?"ok":"muted"}" style="font-size:13px">${S.me.today>=2?"已達出席":"需 2 位"}</span></span></div>`;
+  const draw = () => {
+    const body = $("#body"); if(!body) return;
+    if(!live || !live.who){ body.innerHTML = progress() + `<div class="panel muted" style="text-align:center;padding:36px 18px">台上還沒有人。<br>老師點到報告者後，這裡會自動出現。</div>`; return; }
+    const meOnStage = S.me.slot && live.slot.d === S.me.slot.d && live.slot.ord === S.me.slot.ord;
+    const left = live.phase === "talk" ? TALK - live.elapsed : live.phase === "feedback" ? FEED - live.elapsed : null;
+    body.innerHTML = progress() + `<section class="panel" style="display:grid;gap:10px">
+      <div class="muted" style="font-weight:700">${md(live.who.d)} 第 ${live.who.ord} 位・${esc(live.who.name)}${left!==null?`　<span class="ok">${live.phase==="talk"?"報告中":"回饋時間"} ${mmss(left)}</span>`:""}</div>
+      ${cardHTML(live.who.card)}</section>` +
+      (meOnStage ? `<div class="banner">你正在台上。同學的留言會出現在下面，可以直接回覆提問。</div>` :
+      !pass() ? `<div class="panel" style="text-align:center;display:grid;gap:8px;padding:26px 18px"><div style="font-size:40px">📷</div><b>請用手機相機掃描投影幕上的 QR 碼</b><span class="muted" style="font-size:14px">掃過一次，今天這堂課就可以一直留言。留言就是點名。</span></div>` :
+      `<section class="panel" style="display:grid;gap:10px">
+        <div class="chips">${KINDS.map(k=>`<button class="chip k${k} ${S.kind===k?"on":""}" data-k="${k}">${k}</button>`).join("")}</div>
+        <div class="field"><textarea id="msg" rows="3" maxlength="200" placeholder="寫給 ${esc(live.who.name)} 的${S.kind}…（會顯示你的姓名）">${esc(S.draft||"")}</textarea></div>
+        <button class="btn" id="send">送出${S.kind}</button><div class="err" id="e"></div></section>`) +
+      `<section style="display:grid;gap:8px"><div class="muted" style="font-weight:700">大家的留言（${live.feed.length}）</div>
+       <div class="feed" id="lf">${live.feed.slice().reverse().map(x=>commentHTML(x, meOnStage)).join("") || `<div class="muted">還沒有留言。</div>`}</div></section>`;
+    document.querySelectorAll(".chip").forEach(b => b.onclick = () => { S.draft = $("#msg").value; S.kind = b.dataset.k; draw(); });
+    const m = $("#msg"); if(m) m.oninput = () => S.draft = m.value;
+    const s = $("#send"); if(s) s.onclick = async () => {
+      const t = $("#msg").value.trim(); if(!t) return;
+      s.disabled = true;
+      try{ S.me = await rpc("fp_comment",{p_sid:S.sid,p_pass:pass(),p_d:live.slot.d,p_ord:live.slot.ord,p_kind:S.kind,p_body:t}); S.draft = ""; await poll(true); }
+      catch(e){ if(e.message==="need_scan") store.del("fp_pass"); $("#e").textContent = say(e); s.disabled = false; if(e.message==="need_scan") draw(); }
+    };
+    bindReplies($("#lf"), () => poll(true));
+  };
+  const poll = async (force) => {
+    try{ live = await rpc("fp_live_get"); }catch{ return; }
+    const typing = document.activeElement && ["TEXTAREA","INPUT"].includes(document.activeElement.tagName);
+    const ns = JSON.stringify([live.slot, live.feed.length, live.feed.map(x=>x.reply), live.who && live.who.card, live.phase]);
+    if(force || (ns !== sig && !typing)){ sig = ns; draw(); }
+    else { const k = document.querySelector(".ok"); if(k && live.phase!=="idle"){ const left = (live.phase==="talk"?TALK:FEED) - live.elapsed; k.textContent = `${live.phase==="talk"?"報告中":"回饋時間"} ${mmss(left)}`; } }
+  };
+  poll(true); S.timers.push(setInterval(poll, 3000));
+}
+
+/* ================= 投影端（?host） ================= */
+const H = {board:[], sel:null, live:null, t0:0};
+async function host(){
+  document.body.classList.add("host");
+  app.innerHTML = `<div class="hostgrid">
+    <aside class="panel side" id="side"></aside>
+    <main class="panel slide" id="slide"></main>
+    <aside class="panel rside"><div class="timer"><span class="phase" id="ph">待命</span><span class="clock" id="clk">--:--</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="bt">開始報告 3 分</button><button class="btn sm" id="bf">開始回饋 3 分</button><button class="btn ghost sm" id="bn">下一位 →</button></div>
+      <div class="muted" style="font-weight:700" id="fc">同學留言</div><div class="feed" id="hf"></div></aside></div>`;
+  $("#bt").onclick = () => setLive("talk"); $("#bf").onclick = () => setLive("feedback"); $("#bn").onclick = next;
+  await loadBoard(); await pollLive();
+  setInterval(loadBoard, 15000); setInterval(pollLive, 2000); setInterval(drawQR, 2000); setInterval(tickClock, 250);
+}
+const today = () => new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
+async function loadBoard(){
+  try{ H.board = await rpc("fp_board"); }catch{ return; }
+  const t = today();
+  const days = H.board.slice().sort((a,b) => (b.d===t) - (a.d===t) || a.d.localeCompare(b.d));
+  $("#side").innerHTML = `<div class="brand" style="font-size:18px">期末報告<small>點名字切換報告者</small></div>
+    <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px">掃碼留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>` +
+    days.map(day => `<div><h4>${md(day.d)} ${esc(day.label)}${day.d===t?"・今天":""}</h4>${day.slots.map(s =>
+      `<button class="pick ${H.sel && H.sel.d===day.d && H.sel.ord===s.ord ? "on":""}" data-d="${day.d}" data-o="${s.ord}"><i>${s.ord}</i>${esc(s.name)}${s.ready?"":'<span class="nr">未填卡</span>'}</button>`).join("") || '<div class="muted" style="font-size:13px">尚無人登記</div>'}</div>`).join("");
+  H.qtok = ""; drawQR();
+  $("#qz").onclick = $("#qr").onclick = () => { H.big = true; drawQR(true); };
+  document.querySelectorAll(".pick").forEach(b => b.onclick = () => { H.sel = {d:b.dataset.d, ord:+b.dataset.o}; setLive("idle"); });
+}
+async function drawQR(force){
+  if(force) H.qtok = "";
+  let t; try{ t = await rpc("fp_qr"); }catch{ return; }
+  if(t === H.qtok) return; H.qtok = t;
+  const url = `${location.origin}${location.pathname}?t=${t}`;
+  const box = $("#qr"); if(box){ box.innerHTML = ""; new QRCode(box, {text:url, width:256, height:256, correctLevel:QRCode.CorrectLevel.M}); }
+  let ov = $(".bigqr");
+  if(H.big){
+    if(!ov){ ov = document.createElement("div"); ov.className = "bigqr"; document.body.append(ov); ov.onclick = () => { H.big = false; ov.remove(); }; }
+    ov.innerHTML = `<div><b style="font-size:3vh">手機掃描留言（每 10 秒更新）</b><div id="bq"></div><span class="muted">點任何地方關閉</span></div>`;
+    new QRCode($("#bq"), {text:url, width:640, height:640, correctLevel:QRCode.CorrectLevel.M});
+  }
+}
+async function setLive(phase){
+  if(!H.sel) return;
+  try{ H.live = await rpc("fp_live_set",{p_d:H.sel.d,p_ord:H.sel.ord,p_phase:phase}); H.t0 = Date.now() - H.live.elapsed*1000; renderLive(true); }catch{}
+  document.querySelectorAll(".pick").forEach(b => b.classList.toggle("on", b.dataset.d===H.sel.d && +b.dataset.o===H.sel.ord));
+}
+function next(){
+  const flat = H.board.flatMap(d => d.slots.map(s => ({d:d.d, ord:s.ord})));
+  const i = H.sel ? flat.findIndex(x => x.d===H.sel.d && x.ord===H.sel.ord) : -1;
+  if(flat[i+1]){ H.sel = flat[i+1]; setLive("idle"); }
+}
+let hsig = "";
+async function pollLive(){
+  try{ H.live = await rpc("fp_live_get"); }catch{ return; }
+  H.t0 = Date.now() - H.live.elapsed*1000;
+  if(H.live.slot && !H.sel){ H.sel = {d:H.live.slot.d, ord:H.live.slot.ord}; }
+  renderLive(false);
+}
+function renderLive(force){
+  const L = H.live; if(!L) return;
+  const s = JSON.stringify([L.slot, L.who && L.who.card, L.feed]);
+  if(!force && s === hsig) return; hsig = s;
+  if(!L.who){ $("#slide").innerHTML = `<div class="empty">從左邊點選報告者</div>`; $("#hf").innerHTML = ""; return; }
+  const c = L.who.card, cs = [c.c1,c.c2,c.c3].filter(Boolean);
+  $("#slide").innerHTML = `<div class="who">${md(L.who.d)} 第 ${L.who.ord} 位・${esc(L.who.name)}</div>` + (c.topic || cs.length || c.question ? `
+    <div class="t">${esc(c.topic || "（未填主題）")}</div>
+    ${cs.length ? `<div><div class="lbl">重要概念回顧</div><ol>${cs.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
+    ${c.question ? `<div><div class="lbl">待答問題</div><div class="q">${esc(c.question)}</div></div>` : ""}
+    ${c.ref ? `<div class="ref">${esc(c.ref)}</div>` : ""}` : `<div class="empty">${esc(L.who.name)} 還沒填報告卡</div>`);
+  const hf = $("#hf"), atBottom = hf.scrollHeight - hf.scrollTop - hf.clientHeight < 40;
+  hf.innerHTML = L.feed.map(x => commentHTML(x,false)).join("") || `<div class="muted">等待同學留言…</div>`;
+  $("#fc").textContent = `同學留言（${L.feed.length}）`;
+  if(atBottom || force) hf.scrollTop = hf.scrollHeight;
+}
+function tickClock(){
+  const L = H.live; if(!L) return;
+  const ph = L.phase, lim = ph==="talk" ? TALK : ph==="feedback" ? FEED : 0;
+  $("#ph").textContent = ph==="talk" ? "報告" : ph==="feedback" ? "回饋" : "待命";
+  if(!lim){ $("#clk").textContent = "--:--"; $("#clk").classList.remove("over"); return; }
+  const left = lim - (Date.now() - H.t0)/1000;
+  $("#clk").textContent = left > 0 ? mmss(left) : "時間到"; $("#clk").classList.toggle("over", left <= 0);
+}
+
+/* ---------- 進入點：?host＝投影端，其餘＝學生 ---------- */
+const qs = new URLSearchParams(location.search);
+async function enter(tok){
+  history.replaceState(null, "", location.pathname);
+  try{ const r = await rpc("fp_enter", {p_tok:tok, p_device:DEV}); store.set("fp_pass", r); S.tab = "live"; }
+  catch(e){ alert(say(e)); }
+  student();
+}
+if(qs.has("host")) host(); else if(qs.get("t")) enter(qs.get("t")); else student();
+</script>
+</body>
+</html>
