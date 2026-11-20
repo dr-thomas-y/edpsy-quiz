@@ -387,9 +387,13 @@ async function host(){
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="bt">開始倒數 6 分鐘</button><button class="btn ghost sm" id="bs">停止</button><button class="btn ghost sm" id="bn">下一位 →</button></div>
       <div class="muted" style="font-weight:700" id="fc">同學留言</div><div class="feed" id="hf"></div></aside></div>`;
   $("#bt").onclick = () => setLive("talk"); $("#bs").onclick = () => setLive("idle"); $("#bn").onclick = next;
+  // 每次打開投影頁＝獨立一場點名（12 小時內重新整理沿用同一場）
+  const saved = store.get("fp_host");
+  if(saved && Date.now() - saved.at < 12*3600e3) H.session = saved.id;
+  else { try{ H.session = (await rpc("fp_host_open")).id; store.set("fp_host", {id:H.session, at:Date.now()}); }catch{} }
   await loadBoard(); await pollLive();
   setInterval(loadBoard, 15000); setInterval(pollLive, 2000); setInterval(drawQR, 2000); setInterval(tickClock, 250);
-  const ckc = async () => { try{ $("#ckc").textContent = `已簽到 ${await rpc("fp_checked_count")} 人`; }catch{} }; ckc(); setInterval(ckc, 5000);
+
 }
 const today = () => new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei"});
 async function loadBoard(){
@@ -397,17 +401,33 @@ async function loadBoard(){
   const t = today();
   const days = H.board.slice().sort((a,b) => (b.d===t) - (a.d===t) || a.d.localeCompare(b.d));
   $("#side").innerHTML = `<div class="brand" style="font-size:18px">期末報告<small>點名字切換報告者</small></div>
-    <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px">掃碼簽到・留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>` +
+    <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px" id="qrnote">掃碼簽到・留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>
+    <button class="btn ghost sm" id="rcbtn"><span>結束點名</span></button>` +
     days.map(day => `<div><h4>${md(day.d)} ${esc(day.label)}${day.d===t?"・今天":""}</h4>${day.slots.map(s =>
       `<button class="pick ${H.sel && H.sel.d===day.d && H.sel.ord===s.ord ? "on":""}" data-d="${day.d}" data-o="${s.ord}"><i>${s.ord}</i>${esc(s.name)}${s.ready?"":'<span class="nr">未填卡</span>'}</button>`).join("") || '<div class="muted" style="font-size:13px">尚無人登記</div>'}</div>`).join("");
-  H.qtok = ""; drawQR();
+  H.qtok = ""; drawQR(true);
   $("#qz").onclick = $("#qr").onclick = () => { H.big = true; drawQR(true); };
   document.querySelectorAll(".pick").forEach(b => b.onclick = () => { H.sel = {d:b.dataset.d, ord:+b.dataset.o}; setLive("idle"); });
 }
 async function drawQR(force){
   if(force) H.qtok = "";
-  let t; try{ t = await rpc("fp_qr"); }catch{ return; }
+  if(!H.session) return;
+  let v; try{ v = await rpc("fp_qr", {p_session:H.session}); }catch{ return; }
+  const ck = $("#ckc"); if(ck) ck.textContent = `已簽到 ${v.count} 人`;
+  const rb = $("#rcbtn");
+  if(rb && rb.dataset.state !== String(v.open)){
+    rb.dataset.state = String(v.open); rb.dataset.old = ""; rb.classList.remove("arm");
+    rb.innerHTML = `<span>${v.open ? "結束點名" : "重新開放點名（補點）"}</span>`;
+    if(v.open) twoTap(rb, "再按一次結束點名", async () => { await rpc("fp_session_set",{p_session:H.session,p_open:false}); rb.disabled = false; drawQR(true); });
+    else rb.onclick = async () => { await rpc("fp_session_set",{p_session:H.session,p_open:true}); drawQR(true); };
+  }
+  const t = v.open ? v.token : "closed";
   if(t === H.qtok) return; H.qtok = t;
+  if(!v.open){
+    const box = $("#qr"); if(box) box.innerHTML = `<div style="aspect-ratio:1;display:grid;place-items:center;text-align:center;font-weight:900;color:var(--mute)">點名已結束<br><span style="font-size:12px;font-weight:400">已簽到的同學仍可留言</span></div>`;
+    const ov = $(".bigqr"); if(ov){ H.big = false; ov.remove(); }
+    return;
+  }
   const url = `${location.origin}${location.pathname}?t=${t}`;
   const box = $("#qr"); if(box){ box.innerHTML = ""; new QRCode(box, {text:url, width:256, height:256, correctLevel:QRCode.CorrectLevel.M}); }
   let ov = $(".bigqr");
