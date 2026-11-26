@@ -105,6 +105,12 @@ body.host .wrap{max-width:none;padding-block:1.6vh;height:100vh;min-height:0}
 .pick i{font-style:normal;font-size:12px;color:var(--mute);width:22px;text-align:right;flex:none}
 .pick.on i{color:#cfd3ff}
 .pick .nr{color:var(--bad);font-size:11px;margin-left:auto}
+.pick.done{opacity:.5;text-decoration:line-through}
+.ctl{display:flex;gap:4px;align-items:center;padding:0 0 4px 30px;font-size:12px;flex-wrap:wrap}
+.ctl button{background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:12px;font-weight:700;color:var(--brand)}
+.ctl button[disabled]{opacity:.35}
+.ctl label{display:flex;gap:3px;align-items:center;margin-left:auto;font-weight:700;color:var(--mute);cursor:pointer}
+.ctl input{width:16px;height:16px;margin:0}
 .pick.on .nr{color:#ffd0d0}
 .slide{display:flex;flex-direction:column;gap:2.2vh;padding:4vh 3.4vw;min-height:0;overflow:auto}
 .slide .who{font-size:clamp(16px,1.4vw,24px);font-weight:900;color:var(--mute);letter-spacing:.06em}
@@ -378,19 +384,42 @@ function tabLive(){
 
 /* ================= 投影端（?host） ================= */
 const H = {board:[], sel:null, live:null, t0:0};
+const CODE = () => store.get("fp_code");
+const hcall = async (fn, args) => {   // 投影控制一律帶認證碼；碼不對就回到輸入畫面
+  try{ return await rpc(fn, {p_code:CODE(), ...args}); }
+  catch(e){ if(e.message==="bad_code") hostLogin("認證碼不正確，請重新輸入。"); throw e; }
+};
+function hostLogin(note=""){
+  store.del("fp_code"); document.body.classList.remove("host");
+  app.innerHTML = `<div class="top"><div class="brand">期末報告・投影控制<small>只有老師可以操作</small></div></div>
+  <div class="panel" style="display:grid;gap:14px">
+    <h2>輸入認證碼</h2>
+    <div class="field"><label for="hc">認證碼</label><input id="hc" class="big" type="password" autocomplete="off"></div>
+    <button class="btn" id="hgo">進入控制頁</button><div class="err" id="he">${esc(note)}</div>
+    <a class="linkbtn" href="${location.pathname}">我是學生，回到學生頁</a>
+  </div>`;
+  const go = async () => {
+    const v = $("#hc").value.trim(); if(!v) return; $("#hgo").disabled = true;
+    try{ await rpc("fp_auth",{p_code:v}); store.set("fp_code", v); location.reload(); }
+    catch(e){ $("#he").textContent = e.message==="bad_code" ? "認證碼不正確。" : say(e); $("#hgo").disabled = false; }
+  };
+  $("#hgo").onclick = go; $("#hc").onkeydown = e => { if(e.key==="Enter") go(); };
+}
 async function host(){
+  if(!CODE()) return hostLogin();
+  try{ await rpc("fp_auth",{p_code:CODE()}); }catch(e){ return hostLogin(e.message==="bad_code" ? "認證碼已變更，請重新輸入。" : ""); }
   document.body.classList.add("host");
   app.innerHTML = `<div class="hostgrid">
     <aside class="panel side" id="side"></aside>
     <main class="panel slide" id="slide"></main>
     <aside class="panel rside"><div class="timer"><span class="phase" id="ph">待命</span><span class="clock" id="clk">--:--</span><span class="muted" style="margin-left:auto;font-weight:900" id="ckc"></span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="bt">開始倒數 6 分鐘</button><button class="btn ghost sm" id="bs">停止</button><button class="btn ghost sm" id="bn">下一位 →</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="bt">開始倒數 6 分鐘</button><button class="btn ghost sm" id="bs">停止</button><button class="btn ghost sm" id="bn">下一位 →</button><button class="linkbtn" id="lo" style="margin-left:auto;font-size:12px">鎖定（登出）</button></div>
       <div class="muted" style="font-weight:700" id="fc">同學留言</div><div class="feed" id="hf"></div></aside></div>`;
-  $("#bt").onclick = () => setLive("talk"); $("#bs").onclick = () => setLive("idle"); $("#bn").onclick = next;
+  $("#bt").onclick = () => setLive("talk"); $("#bs").onclick = () => setLive("idle"); $("#bn").onclick = next; $("#lo").onclick = () => { store.del("fp_code"); location.href = location.pathname; };
   // 每次打開投影頁＝獨立一場點名（12 小時內重新整理沿用同一場）
   const saved = store.get("fp_host");
   if(saved && Date.now() - saved.at < 12*3600e3) H.session = saved.id;
-  else { try{ H.session = (await rpc("fp_host_open")).id; store.set("fp_host", {id:H.session, at:Date.now()}); }catch{} }
+  else { try{ H.session = (await hcall("fp_host_open")).id; store.set("fp_host", {id:H.session, at:Date.now()}); }catch{} }
   await loadBoard(); await pollLive();
   setInterval(loadBoard, 15000); setInterval(pollLive, 2000); setInterval(drawQR, 2000); setInterval(tickClock, 250);
 
@@ -399,15 +428,27 @@ const today = () => new Date().toLocaleDateString("sv-SE",{timeZone:"Asia/Taipei
 async function loadBoard(){
   try{ H.board = await rpc("fp_board"); }catch{ return; }
   const t = today();
-  const days = H.board.slice().sort((a,b) => (b.d===t) - (a.d===t) || a.d.localeCompare(b.d));
-  $("#side").innerHTML = `<div class="brand" style="font-size:18px">期末報告<small>點名字切換報告者</small></div>
+  const days = H.days = H.board.slice().sort((a,b) => (b.d===t) - (a.d===t) || a.d.localeCompare(b.d));
+  const near = (H.board.find(x => x.d >= t) || {}).d;   // 最近一場（上課當天＝今天）
+  $("#side").innerHTML = `<div class="brand" style="font-size:18px">期末報告<small>點名字＝請他上台（任何一週都可以）</small></div>
     <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px" id="qrnote">掃碼簽到・留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>
     <button class="btn ghost sm" id="rcbtn"><span>結束點名</span></button>` +
-    days.map(day => `<div><h4>${md(day.d)} ${esc(day.label)}${day.d===t?"・今天":""}</h4>${day.slots.map(s =>
-      `<button class="pick ${H.sel && H.sel.d===day.d && H.sel.ord===s.ord ? "on":""}" data-d="${day.d}" data-o="${s.ord}"><i>${s.ord}</i>${esc(s.name)}${s.ready?"":'<span class="nr">未填卡</span>'}</button>`).join("") || '<div class="muted" style="font-size:13px">尚無人登記</div>'}</div>`).join("");
+    days.map(day => `<div><h4>${md(day.d)} ${esc(day.label)}${day.d===t?"・今天":""}</h4>${day.slots.map(s => {
+      const k = `data-d="${day.d}" data-o="${s.ord}"`;
+      return `<button class="pick ${s.done?"done":""} ${H.sel && H.sel.d===day.d && H.sel.ord===s.ord ? "on":""}" ${k}><i>${s.ord}</i>${esc(s.name)}${s.ready?"":'<span class="nr">未填卡</span>'}</button>
+      <div class="ctl"><button class="mv" ${k} data-to="${s.ord-1}" ${s.ord<=1?"disabled":""} title="往前一位">↑</button><button class="mv" ${k} data-to="${s.ord+1}" ${s.ord>=day.cap?"disabled":""} title="往後一位">↓</button>${near && day.d!==near ? `<button class="mvnow" ${k}>移到 ${md(near).replace(/（.）/,"")}</button>` : ""}<label><input type="checkbox" class="dn" ${k} ${s.done?"checked":""}>已報告</label></div>`;
+    }).join("") || '<div class="muted" style="font-size:13px">尚無人登記</div>'}</div>`).join("");
   H.qtok = ""; drawQR(true);
   $("#qz").onclick = $("#qr").onclick = () => { H.big = true; drawQR(true); };
   document.querySelectorAll(".pick").forEach(b => b.onclick = () => { H.sel = {d:b.dataset.d, ord:+b.dataset.o}; setLive("idle"); });
+  const act = async (fn, args) => { try{ H.board = await hcall(fn, args); }catch{} loadBoard(); };
+  document.querySelectorAll(".mv").forEach(b => b.onclick = () => act("fp_move", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_to_d:b.dataset.d, p_to_ord:+b.dataset.to}));
+  document.querySelectorAll(".mvnow").forEach(b => b.onclick = () => {
+    const day = H.board.find(x => x.d === near), used = new Set(day.slots.map(s => s.ord));
+    let o = 1; while(used.has(o)) o++;   // 第一個空位；全滿就接在最後（名額自動加一）
+    act("fp_move", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_to_d:near, p_to_ord:o});
+  });
+  document.querySelectorAll(".dn").forEach(b => b.onchange = () => act("fp_done", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_done:b.checked}));
 }
 async function drawQR(force){
   if(force) H.qtok = "";
@@ -418,8 +459,8 @@ async function drawQR(force){
   if(rb && rb.dataset.state !== String(v.open)){
     rb.dataset.state = String(v.open); rb.dataset.old = ""; rb.classList.remove("arm");
     rb.innerHTML = `<span>${v.open ? "結束點名" : "重新開放點名（補點）"}</span>`;
-    if(v.open) twoTap(rb, "再按一次結束點名", async () => { await rpc("fp_session_set",{p_session:H.session,p_open:false}); rb.disabled = false; drawQR(true); });
-    else rb.onclick = async () => { await rpc("fp_session_set",{p_session:H.session,p_open:true}); drawQR(true); };
+    if(v.open) twoTap(rb, "再按一次結束點名", async () => { await hcall("fp_session_set",{p_session:H.session,p_open:false}); rb.disabled = false; drawQR(true); });
+    else rb.onclick = async () => { await hcall("fp_session_set",{p_session:H.session,p_open:true}); drawQR(true); };
   }
   const t = v.open ? v.token : "closed";
   if(t === H.qtok) return; H.qtok = t;
@@ -439,19 +480,21 @@ async function drawQR(force){
 }
 async function setLive(phase){
   if(!H.sel) return;
-  try{ H.live = await rpc("fp_live_set",{p_d:H.sel.d,p_ord:H.sel.ord,p_phase:phase}); H.t0 = Date.now() - H.live.elapsed*1000; renderLive(true); }catch{}
+  try{ H.live = await hcall("fp_live_set",{p_d:H.sel.d,p_ord:H.sel.ord,p_phase:phase}); H.t0 = Date.now() - H.live.elapsed*1000; renderLive(true); }catch{}
   document.querySelectorAll(".pick").forEach(b => b.classList.toggle("on", b.dataset.d===H.sel.d && +b.dataset.o===H.sel.ord));
 }
 function next(){
-  const flat = H.board.flatMap(d => d.slots.map(s => ({d:d.d, ord:s.ord})));
+  // 照左邊清單的順序，跳過已報告的人
+  const flat = (H.days || H.board).flatMap(d => d.slots.map(s => ({d:d.d, ord:s.ord, done:s.done})));
   const i = H.sel ? flat.findIndex(x => x.d===H.sel.d && x.ord===H.sel.ord) : -1;
-  if(flat[i+1]){ H.sel = flat[i+1]; setLive("idle"); }
+  const n = flat.slice(i+1).find(x => !x.done);
+  if(n){ H.sel = {d:n.d, ord:n.ord}; setLive("idle"); }
 }
 let hsig = "";
 async function pollLive(){
   try{ H.live = await rpc("fp_live_get"); }catch{ return; }
   H.t0 = Date.now() - H.live.elapsed*1000;
-  if(H.live.slot && !H.sel){ H.sel = {d:H.live.slot.d, ord:H.live.slot.ord}; }
+  if(H.live.slot) H.sel = {d:H.live.slot.d, ord:H.live.slot.ord};   // 搬移後位置會變，跟著台上的人走
   renderLive(false);
 }
 function renderLive(force){
