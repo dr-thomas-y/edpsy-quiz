@@ -107,8 +107,7 @@ body.host .wrap{max-width:none;padding-block:1.6vh;height:100vh;min-height:0}
 .pick .nr{color:var(--bad);font-size:11px;margin-left:auto}
 .pick.done{opacity:.5;text-decoration:line-through}
 .ctl{display:flex;gap:4px;align-items:center;padding:0 0 4px 30px;font-size:12px;flex-wrap:wrap}
-.ctl button{background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:12px;font-weight:700;color:var(--brand)}
-.ctl button[disabled]{opacity:.35}
+.ctl select{background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:2px 4px;font:inherit;font-size:12px;font-weight:700;color:var(--brand)}
 .ctl label{display:flex;gap:3px;align-items:center;margin-left:auto;font-weight:700;color:var(--mute);cursor:pointer}
 .ctl input{width:16px;height:16px;margin:0}
 .pick.on .nr{color:#ffd0d0}
@@ -429,24 +428,23 @@ async function loadBoard(){
   try{ H.board = await rpc("fp_board"); }catch{ return; }
   const t = today();
   const days = H.days = H.board.slice().sort((a,b) => (b.d===t) - (a.d===t) || a.d.localeCompare(b.d));
-  const near = (H.board.find(x => x.d >= t) || {}).d;   // 最近一場（上課當天＝今天）
   $("#side").innerHTML = `<div class="brand" style="font-size:18px">期末報告<small>點名字＝請他上台（任何一週都可以）</small></div>
     <div class="qrmini" id="qr" title="點一下放大"></div><div class="muted" style="font-size:12px;text-align:center;margin-top:-6px" id="qrnote">掃碼簽到・留言（每 10 秒更新）<button class="linkbtn" id="qz" style="font-size:12px">放大 QR</button></div>
     <button class="btn ghost sm" id="rcbtn"><span>結束點名</span></button>` +
     days.map(day => `<div><h4>${md(day.d)} ${esc(day.label)}${day.d===t?"・今天":""}</h4>${day.slots.map(s => {
       const k = `data-d="${day.d}" data-o="${s.ord}"`;
       return `<button class="pick ${s.done?"done":""} ${H.sel && H.sel.d===day.d && H.sel.ord===s.ord ? "on":""}" ${k}><i>${s.ord}</i>${esc(s.name)}${s.ready?"":'<span class="nr">未填卡</span>'}</button>
-      <div class="ctl"><button class="mv" ${k} data-to="${s.ord-1}" ${s.ord<=1?"disabled":""} title="往前一位">↑</button><button class="mv" ${k} data-to="${s.ord+1}" ${s.ord>=day.cap?"disabled":""} title="往後一位">↓</button>${near && day.d!==near ? `<button class="mvnow" ${k}>移到 ${md(near).replace(/（.）/,"")}</button>` : ""}<label><input type="checkbox" class="dn" ${k} ${s.done?"checked":""}>已報告</label></div>`;
+      <div class="ctl"><select class="mvd" ${k} title="改到哪一天報告">${H.board.map(x => `<option value="${x.d}" ${x.d===day.d?"selected":""}>${md(x.d).replace(/（.）/,"")}</option>`).join("")}</select><label><input type="checkbox" class="dn" ${k} ${s.done?"checked":""}>已報告</label></div>`;
     }).join("") || '<div class="muted" style="font-size:13px">尚無人登記</div>'}</div>`).join("");
   H.qtok = ""; drawQR(true);
   $("#qz").onclick = $("#qr").onclick = () => { H.big = true; drawQR(true); };
   document.querySelectorAll(".pick").forEach(b => b.onclick = () => { H.sel = {d:b.dataset.d, ord:+b.dataset.o}; setLive("idle"); });
   const act = async (fn, args) => { try{ H.board = await hcall(fn, args); }catch{} loadBoard(); };
-  document.querySelectorAll(".mv").forEach(b => b.onclick = () => act("fp_move", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_to_d:b.dataset.d, p_to_ord:+b.dataset.to}));
-  document.querySelectorAll(".mvnow").forEach(b => b.onclick = () => {
-    const day = H.board.find(x => x.d === near), used = new Set(day.slots.map(s => s.ord));
-    let o = 1; while(used.has(o)) o++;   // 第一個空位；全滿就接在最後（名額自動加一）
-    act("fp_move", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_to_d:near, p_to_ord:o});
+  // 改日期：放進那天第一個空位；那天全滿就接在最後（名額自動加一）
+  document.querySelectorAll(".mvd").forEach(b => b.onchange = () => {
+    const used = new Set(H.board.find(x => x.d === b.value).slots.map(s => s.ord));
+    let o = 1; while(used.has(o)) o++;
+    act("fp_move", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_to_d:b.value, p_to_ord:o});
   });
   document.querySelectorAll(".dn").forEach(b => b.onchange = () => act("fp_done", {p_d:b.dataset.d, p_ord:+b.dataset.o, p_done:b.checked}));
 }
